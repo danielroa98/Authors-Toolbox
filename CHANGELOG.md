@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.1 — 2026-10-13
+- **Rewritten in TypeScript (strict mode).** Every value in the plugin now has a real type, which clears the 3,500 or so code warnings from the Obsidian directory review. `npm run build` type-checks before bundling.
+- **Searchable settings:** on Obsidian 1.13 and later, every setting appears in the settings search box. Older versions keep the classic settings screen. Both are built from one list, so they always match.
+- Settings fall back to sensible values again: a zero or empty reading speed, sentence threshold or repetition window goes back to its default, an empty scripts folder goes back to `Scripts`, and the crutch-word boxes show the built-in lists.
+- Clearer wording for several settings and messages (for example *Smart line breaks in scripts*, *English crutch words*, *Spanish crutch words*).
+
 ## 1.4.4 — 2026-10-13
 - **Privacy:** the plugin no longer lists every file in your vault. **Insert image…** now opens a folder browser that starts in your attachments folder (or the image folder from settings), and you can move up and down folders from there.
 - **Privacy:** **Export as .fountain** no longer touches the clipboard. It only saves the file in `Exports/`.

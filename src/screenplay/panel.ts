@@ -1,19 +1,53 @@
 import { Menu, setIcon } from "obsidian";
-import { cueName, fmtEighths } from "./fountain.js";
-import { fmtN } from "../view/helpers.js";
+import { cueName, fmtEighths, ScriptAnalysis, ScriptOutline, OutlineGroup, OutlineScene } from "./fountain";
+import { fmtN } from "../view/helpers";
+import type { DocRange } from "../editor/issues";
+
+export interface ScriptPanelState {
+  script: ScriptAnalysis;
+  sOutline: ScriptOutline;
+  cursorLine: number | null;
+  fm: Record<string, unknown>;
+  selection: { words: number; chars: number; sentences: number } | null;
+}
+
+export interface ScriptPanelHost {
+  plugin: {
+    jumpToLine(line: number): void;
+    moveSection(parentId: string, kind: string, from: number, to: number): void;
+    selectLines(from: number, to: number): void;
+    lineRange(line: number): DocRange;
+    showRanges(ranges: DocRange[], current: number): void;
+  };
+  listEl: HTMLElement;
+  noteFilter: string | null;
+  startDrag(e: PointerEvent, row: HTMLElement, key: string, groups: Map<string, HTMLElement[]>, r: unknown): void;
+  cycleFind(key: string, ranges: DocRange[]): void;
+  render(): void;
+}
+
+interface SceneRow {
+  node: OutlineGroup | OutlineScene;
+  kind: "act" | "c";
+  depth: number;
+  siblings: OutlineScene[];
+  idx: number;
+  parentId: string;
+}
 
 /* ---------- panel tabs for scripts ---------- */
 
 export const scriptTabMethods = {
-  renderScriptStats(el, st) {
+  renderScriptStats(this: ScriptPanelHost, el: HTMLElement, st: ScriptPanelState): void {
     const sp = st.script, P = this.plugin;
     const hero = el.createDiv({ cls: "at-hero" });
     hero.createDiv({ cls: "at-hero-num", text: "≈ " + (sp.pages < 10 ? sp.pages.toFixed(1) : Math.round(sp.pages)) });
     const mins = Math.max(1, Math.round(sp.minutes));
     const kind = mins <= 40 ? "Short film" : mins < 70 ? "Medium-length film" : "Feature film";
     hero.createDiv({ cls: "at-hero-sub", text: `pages · ≈ ${mins} min on screen · ${kind}` });
-    const fmt = String((st.fm && st.fm.format) || "").toLowerCase();
-    const ranges = { short: [5, 30], corto: [5, 30], feature: [90, 120], largo: [90, 120], pilot: [30, 60], piloto: [30, 60], tv: [30, 60] };
+    const rawFmt = st.fm && st.fm.format;
+    const fmt = typeof rawFmt === "string" || typeof rawFmt === "number" ? String(rawFmt).toLowerCase() : "";
+    const ranges: Record<string, [number, number]> = { short: [5, 30], corto: [5, 30], feature: [90, 120], largo: [90, 120], pilot: [30, 60], piloto: [30, 60], tv: [30, 60] };
     if (ranges[fmt]) {
       const [lo, hi] = ranges[fmt];
       const g = el.createDiv({ cls: "at-goal" });
@@ -27,7 +61,12 @@ export const scriptTabMethods = {
       box.createDiv({ text: `${fmtN(st.selection.words)} words` });
     }
     const grid = el.createDiv({ cls: "at-grid" });
-    const tile = (label, value, hint) => { const d = grid.createDiv({ cls: "at-tile" }); d.createDiv({ cls: "at-tile-v", text: value }); d.createDiv({ cls: "at-tile-l", text: label }); if (hint) d.setAttr("title", hint); };
+    const tile = (label: string, value: string, hint?: string): void => {
+      const d = grid.createDiv({ cls: "at-tile" });
+      d.createDiv({ cls: "at-tile-v", text: value });
+      d.createDiv({ cls: "at-tile-l", text: label });
+      if (hint) d.setAttr("title", hint);
+    };
     const totalW = sp.dialogueWords + sp.actionWords;
     tile("Scenes", fmtN(sp.scenes.length));
     tile("Speaking characters", fmtN(sp.characters.length));
@@ -42,7 +81,12 @@ export const scriptTabMethods = {
       const s = el.createDiv({ cls: "at-section" });
       s.createDiv({ cls: "at-label", text: "Time of day" });
       const box = s.createDiv({ cls: "at-chips" });
-      for (const [t, n] of times) { const c = box.createEl("button", { cls: "at-chip" }); c.createSpan({ text: t }); c.createSpan({ cls: "at-chip-n", text: "×" + n }); c.onclick = () => this.cycleFind("time:" + t, sp.scenes.filter((x) => x.time === t).map((x) => P.lineRange(x.line))); }
+      for (const [t, n] of times) {
+        const c = box.createEl("button", { cls: "at-chip" });
+        c.createSpan({ text: t });
+        c.createSpan({ cls: "at-chip-n", text: "×" + n });
+        c.onclick = (): void => this.cycleFind("time:" + t, sp.scenes.filter((x) => x.time === t).map((x) => P.lineRange(x.line)));
+      }
     }
     if (sp.scenes.length > 1) {
       const s = el.createDiv({ cls: "at-section" });
@@ -54,7 +98,7 @@ export const scriptTabMethods = {
         const b = chart.createDiv({ cls: "at-rbar" + (x.eighths > 24 ? " is-long" : "") });
         b.setCssProps({ "--at-h": Math.max(5, (x.eighths / max) * 100) + "%" });
         b.setAttr("title", `${x.heading} — ${fmtEighths(x.eighths)} pg`);
-        b.onclick = () => P.jumpToLine(x.line);
+        b.onclick = (): void => P.jumpToLine(x.line);
       });
     }
     const ref = el.createEl("details", { cls: "at-section at-ref" });
@@ -79,12 +123,12 @@ export const scriptTabMethods = {
     for (const [a, b] of rows) { tbl.createDiv({ cls: "at-ref-k", text: a }); tbl.createDiv({ cls: "at-ref-v", text: b }); }
   },
 
-  renderScenes(el, st) {
+  renderScenes(this: ScriptPanelHost, el: HTMLElement, st: ScriptPanelState): void {
     const o = st.sOutline, sp = st.script, P = this.plugin;
     const byLine = new Map(sp.scenes.map((s, i) => [s.line, { s, i }]));
-    const rows = [];
-    const walk = (n, depth) => {
-      if (n.id) rows.push({ node: n, kind: "act", depth });
+    const rows: SceneRow[] = [];
+    const walk = (n: OutlineGroup, depth: number): void => {
+      if (n.id) rows.push({ node: n, kind: "act", depth, siblings: [], idx: -1, parentId: n.id });
       n.scenes.forEach((s, i) => rows.push({ node: s, kind: "c", depth: depth + (n.id ? 1 : 0), siblings: n.scenes, idx: i, parentId: n.id }));
       n.children.forEach((c) => walk(c, depth + (n.id ? 1 : 0)));
     };
@@ -96,7 +140,7 @@ export const scriptTabMethods = {
     el.createDiv({ cls: "at-hint", text: "Scenes numbered in order, with length in eighths of a page. Drag ⠿ or use ⋯ to reorder scenes within an act (# headings)." });
     const list = el.createDiv({ cls: "at-outline" });
     this.listEl = list;
-    const groups = new Map();
+    const groups = new Map<string, HTMLElement[]>();
     for (const r of rows) {
       const n = r.node;
       const row = list.createDiv({ cls: "at-orow " + (r.kind === "act" ? "at-orow-h" : "at-orow-sc") });
@@ -107,20 +151,20 @@ export const scriptTabMethods = {
         setIcon(grip, "grip-vertical");
         const key = r.parentId + "|c";
         if (!groups.has(key)) groups.set(key, []);
-        groups.get(key).push(row);
+        groups.get(key)!.push(row);
         grip.addEventListener("pointerdown", (e) => this.startDrag(e, row, key, groups, r));
       } else grip.addClass("is-off");
       const t = row.createDiv({ cls: "at-otitle" });
       const info = byLine.get(n.start);
       if (r.kind === "c" && info) t.createSpan({ cls: "at-scnum", text: String(info.i + 1) });
       t.createSpan({ text: n.title });
-      t.onclick = () => P.jumpToLine(n.start);
+      t.onclick = (): void => P.jumpToLine(n.start);
       row.createDiv({ cls: "at-owords", text: r.kind === "c" && info ? fmtEighths(info.s.eighths) : "" });
       if (r.kind === "c") {
         const more = row.createDiv({ cls: "at-omore" }); setIcon(more, "more-horizontal");
-        more.onclick = (e) => {
+        more.onclick = (e: MouseEvent): void => {
           const m = new Menu();
-          const mv = (to) => P.moveSection(r.parentId, "c", r.idx, to);
+          const mv = (to: number): void => P.moveSection(r.parentId, "c", r.idx, to);
           if (r.idx > 0) m.addItem((i) => i.setTitle("Move up").setIcon("arrow-up").onClick(() => mv(r.idx - 1)));
           if (r.idx < r.siblings.length - 1) m.addItem((i) => i.setTitle("Move down").setIcon("arrow-down").onClick(() => mv(r.idx + 1)));
           if (r.idx > 1) m.addItem((i) => i.setTitle("Move to top").setIcon("chevrons-up").onClick(() => mv(0)));
@@ -133,7 +177,7 @@ export const scriptTabMethods = {
     }
   },
 
-  renderCast(el, st) {
+  renderCast(this: ScriptPanelHost, el: HTMLElement, st: ScriptPanelState): void {
     const sp = st.script, P = this.plugin;
     const sec = el.createDiv({ cls: "at-section" });
     sec.createDiv({ cls: "at-label", text: `Characters — ${sp.characters.length}` });
@@ -146,7 +190,7 @@ export const scriptTabMethods = {
       top.createSpan({ cls: "at-cast-name", text: c.name });
       top.createSpan({ cls: "at-cast-n", text: `${c.speeches} · ${fmtN(c.words)} w · ${c.scenes.size} sc` });
       it.createDiv({ cls: "at-bar" }).createDiv({ cls: "at-bar-fill" }).setCssProps({ "--at-pct": (c.words / maxW) * 100 + "%" });
-      it.onclick = () => this.cycleFind("cast:" + c.name, sp.types.map((x, n) => (x && x.t === "character" && cueName(sp.lines[n]) === c.name ? n : -1)).filter((n) => n >= 0).map((n) => P.lineRange(n)));
+      it.onclick = (): void => this.cycleFind("cast:" + c.name, sp.types.map((x, n) => (x && x.t === "character" && cueName(sp.lines[n]) === c.name ? n : -1)).filter((n) => n >= 0).map((n) => P.lineRange(n)));
     }
     const ls = el.createDiv({ cls: "at-section" });
     ls.createDiv({ cls: "at-label", text: `Locations — ${sp.locations.length}` });
@@ -154,23 +198,23 @@ export const scriptTabMethods = {
       const it = ls.createDiv({ cls: "at-item" });
       it.createSpan({ cls: "at-item-n", text: "×" + l.scenes });
       it.createSpan({ text: `${[...l.ie].join("/")} ${l.name}${l.times.size ? " — " + [...l.times].join(", ") : ""}` });
-      it.onclick = () => this.cycleFind("loc:" + l.name, sp.scenes.filter((s) => s.location === l.name).map((s) => P.lineRange(s.line)));
+      it.onclick = (): void => this.cycleFind("loc:" + l.name, sp.scenes.filter((s) => s.location === l.name).map((s) => P.lineRange(s.line)));
     }
   },
 
-  renderNotes(el, st) {
+  renderNotes(this: ScriptPanelHost, el: HTMLElement, st: ScriptPanelState): void {
     const sp = st.script, P = this.plugin;
     el.createDiv({ cls: "at-hint", text: "Screenwriting conventions worth checking — guidance, not rules. Tap one to go to the line." });
     if (!sp.notes.length) { el.createDiv({ cls: "at-ok", text: "Nothing to flag. ✓" }); return; }
-    const LBL = { dense: "Dense action", speech: "Long speech", heading: "Scene heading", camera: "Camera direction", unfilmable: "Not filmable", intro: "Character introduction", paren: "Parenthetical" };
-    const counts = {};
+    const LBL: Record<string, string> = { dense: "Dense action", speech: "Long speech", heading: "Scene heading", camera: "Camera direction", unfilmable: "Not filmable", intro: "Character introduction", paren: "Parenthetical" };
+    const counts: Record<string, number> = {};
     sp.notes.forEach((n) => (counts[n.kind] = (counts[n.kind] || 0) + 1));
     const filt = this.noteFilter || null;
     const chips = el.createDiv({ cls: "at-chips" });
     for (const [k, n] of Object.entries(counts)) {
       const c = chips.createEl("button", { cls: "at-chip" + (filt === k ? " is-active" : "") });
       c.createSpan({ text: LBL[k] || k }); c.createSpan({ cls: "at-chip-n", text: String(n) });
-      c.onclick = () => { this.noteFilter = filt === k ? null : k; this.render(); };
+      c.onclick = (): void => { this.noteFilter = filt === k ? null : k; this.render(); };
     }
     const list = el.createDiv({ cls: "at-issues" });
     for (const n of sp.notes.filter((x) => !filt || x.kind === filt).slice(0, 120)) {
@@ -179,7 +223,7 @@ export const scriptTabMethods = {
       top.createSpan({ cls: "at-dot" }); top.createSpan({ cls: "at-ic-kind", text: LBL[n.kind] || n.kind });
       card.createDiv({ cls: "at-ic-msg", text: n.msg });
       card.createDiv({ cls: "at-ic-ctx", text: (sp.lines[n.line] || "").trim().slice(0, 90) });
-      card.onclick = () => P.showRanges([P.lineRange(n.line)], 0);
+      card.onclick = (): void => P.showRanges([P.lineRange(n.line)], 0);
     }
   },
 };

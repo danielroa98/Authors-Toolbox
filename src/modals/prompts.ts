@@ -1,8 +1,12 @@
-import { Modal } from "obsidian";
+import { App, Modal } from "obsidian";
 
 export class NumberPrompt extends Modal {
-  constructor(app, title, value, onDone) { super(app); this.t = title; this.v = value; this.onDone = onDone; }
-  onOpen() {
+  private readonly t: string;
+  private readonly v: number;
+  private readonly onDone: (n: number) => void;
+
+  constructor(app: App, title: string, value: number, onDone: (n: number) => void) { super(app); this.t = title; this.v = value; this.onDone = onDone; }
+  onOpen(): void {
     this.contentEl.createEl("h3", { text: this.t });
     const input = this.contentEl.createEl("input", { type: "number", attr: { inputmode: "numeric", min: "0" } });
     input.value = this.v ? String(this.v) : "";
@@ -14,14 +18,19 @@ export class NumberPrompt extends Modal {
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") save(); });
     window.setTimeout(() => input.focus(), 30);
   }
-  onClose() { this.contentEl.empty(); }
+  onClose(): void { this.contentEl.empty(); }
 }
 
 /* ---------- small text prompt ---------- */
 
 export class TextPrompt extends Modal {
-  constructor(app, title, value, onDone, hint) { super(app); this.t = title; this.v = value; this.onDone = onDone; this.hint = hint; }
-  onOpen() {
+  private readonly t: string;
+  private readonly v: string;
+  private readonly onDone: (value: string) => void;
+  private readonly hint?: string;
+
+  constructor(app: App, title: string, value: string, onDone: (value: string) => void, hint?: string) { super(app); this.t = title; this.v = value; this.onDone = onDone; this.hint = hint; }
+  onOpen(): void {
     this.contentEl.createEl("h3", { text: this.t });
     if (this.hint) this.contentEl.createDiv({ cls: "setting-item-description", text: this.hint });
     const input = this.contentEl.createEl("input", { type: "text" });
@@ -33,5 +42,5 @@ export class TextPrompt extends Modal {
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") ok(); });
     window.setTimeout(() => { input.focus(); input.select(); }, 30);
   }
-  onClose() { this.contentEl.empty(); }
+  onClose(): void { this.contentEl.empty(); }
 }

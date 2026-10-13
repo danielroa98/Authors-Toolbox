@@ -1,19 +1,37 @@
-import { Modal, Setting, Notice, TFile, TFolder } from "obsidian";
-import { IMG_EXT } from "../constants.js";
+import { App, Editor, MarkdownView, Modal, Setting, Notice, TFile, TFolder } from "obsidian";
+import { IMG_EXT, ImageAlign, ToolboxPrefs } from "../constants";
+
+export interface ImageInsertPlugin {
+  prefs: ToolboxPrefs;
+  saveUpload(file: File, sourcePath: string): Promise<TFile>;
+}
 
 /* ---------- image modal ---------- */
 
 export class InsertImageModal extends Modal {
-  constructor(app, plugin, editor, view) {
+  plugin: ImageInsertPlugin;
+  editor: Editor;
+  view: MarkdownView | null;
+  file: TFile | null;
+  upload: File | null;
+  width: number;
+  align: ImageAlign;
+  caption: string;
+  list!: HTMLSelectElement;
+
+  constructor(app: App, plugin: ImageInsertPlugin, editor: Editor, view: MarkdownView | null) {
     super(app);
-    this.plugin = plugin; this.editor = editor; this.view = view;
+    this.plugin = plugin;
+    this.editor = editor;
+    this.view = view;
     this.file = null;       // existing TFile from vault
     this.upload = null;     // File from disk
     this.width = plugin.prefs.defaultWidth;
     this.align = plugin.prefs.defaultAlign;
     this.caption = "";
   }
-  onOpen() {
+
+  onOpen(): void {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass("at-modal");
@@ -23,10 +41,12 @@ export class InsertImageModal extends Modal {
     const input = createEl("input", { type: "file" });
     input.accept = "image/*";
     input.addClass("at-hidden");
-    input.onchange = () => {
+    input.onchange = (): void => {
       if (input.files && input.files[0]) {
-        this.upload = input.files[0]; this.file = null;
-        up.setDesc(this.upload.name); this.list.value = "";
+        this.upload = input.files[0];
+        this.file = null;
+        up.setDesc(this.upload.name);
+        this.list.value = "";
       }
     };
     up.addButton((b) => b.setButtonText("Choose file…").onClick(() => input.click()));
@@ -44,26 +64,36 @@ export class InsertImageModal extends Modal {
     this.list.size = 8;
     this.list.addClass("at-full");
     let folder = this.app.vault.getRoot();
-    const show = () => {
+    const show = (): void => {
       where.setText(folder.isRoot() ? "/" : folder.path);
       upBtn.disabled = folder.isRoot();
       const q = search.value.toLowerCase();
       this.list.empty();
       const kids = folder.children.filter((c) => c.name.toLowerCase().includes(q));
-      kids.filter((c) => c instanceof TFolder).sort((a, b) => a.name.localeCompare(b.name))
+      kids.filter((c): c is TFolder => c instanceof TFolder).sort((a, b) => a.name.localeCompare(b.name))
         .forEach((c) => this.list.createEl("option", { text: "📁 " + c.name, value: "d:" + c.path }));
-      kids.filter((c) => c instanceof TFile && IMG_EXT.includes(c.extension.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name))
+      kids.filter((c): c is TFile => c instanceof TFile && IMG_EXT.includes(c.extension.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name))
         .forEach((c) => this.list.createEl("option", { text: c.name, value: "f:" + c.path }));
     };
-    const go = (f) => { if (f instanceof TFolder) { folder = f; search.value = ""; show(); } };
-    upBtn.onclick = () => go(folder.parent);
-    search.oninput = show;
-    this.list.onchange = () => {
+    const go = (f: TFolder | null | undefined): void => {
+      if (f instanceof TFolder) {
+        folder = f;
+        search.value = "";
+        show();
+      }
+    };
+    upBtn.onclick = (): void => go(folder.parent);
+    search.oninput = (): void => show();
+    this.list.onchange = (): void => {
       const v = this.list.value;
       const target = this.app.vault.getAbstractFileByPath(v.slice(2));
-      if (v.startsWith("d:")) { go(target); return; }
+      if (v.startsWith("d:")) {
+        if (target instanceof TFolder) go(target);
+        return;
+      }
       this.file = target instanceof TFile ? target : null;
-      this.upload = null; up.setDesc("No file chosen");
+      this.upload = null;
+      up.setDesc("No file chosen");
     };
     show();
     void this.startFolder().then(go);
@@ -72,30 +102,34 @@ export class InsertImageModal extends Modal {
       t.setValue(String(this.width || "")).onChange((v) => (this.width = parseInt(v, 10) || 0)));
     new Setting(contentEl).setName("Alignment").addDropdown((d) =>
       d.addOptions({ none: "Inline (no wrapper)", center: "Centered", left: "Left", right: "Right" })
-        .setValue(this.align).onChange((v) => (this.align = v)));
+        .setValue(this.align).onChange((v) => (this.align = v as ImageAlign)));
     new Setting(contentEl).setName("Caption").setDesc("Optional, shown in italics under the image")
       .addText((t) => t.onChange((v) => (this.caption = v)));
     new Setting(contentEl).addButton((b) =>
-      b.setButtonText("Insert").setCta().onClick(() => this.insert()));
+      b.setButtonText("Insert").setCta().onClick(() => { void this.insert(); }));
   }
+
   /** The image folder from settings, else the folder Obsidian uses for this note's attachments. */
-  async startFolder() {
-    const byPath = (p) => this.app.vault.getAbstractFileByPath(p);
+  async startFolder(): Promise<TFolder | null> {
+    const byPath = (p: string): TFolder | null => {
+      const f = this.app.vault.getAbstractFileByPath(p);
+      return f instanceof TFolder ? f : null;
+    };
     if (this.plugin.prefs.imageFolder) {
       const f = byPath(this.plugin.prefs.imageFolder);
-      if (f instanceof TFolder) return f;
+      if (f) return f;
     }
     try {
       const src = this.view && this.view.file ? this.view.file.path : "";
       const p = await this.app.fileManager.getAvailablePathForAttachment("image.png", src);
       const dir = p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "";
       const f = dir ? byPath(dir) : this.app.vault.getRoot();
-      if (f instanceof TFolder) return f;
+      if (f) return f;
     } catch { /* fall back to the note's folder */ }
-    return this.view && this.view.file ? this.view.file.parent : this.app.vault.getRoot();
+    return (this.view && this.view.file ? this.view.file.parent : this.app.vault.getRoot()) ?? this.app.vault.getRoot();
   }
 
-  async insert() {
+  async insert(): Promise<void> {
     try {
       let tfile = this.file;
       if (this.upload) tfile = await this.plugin.saveUpload(this.upload, this.view && this.view.file ? this.view.file.path : "");
@@ -117,10 +151,12 @@ export class InsertImageModal extends Modal {
         ed.replaceRange(prefix + lines.join("\n") + "\n", { line: ln, ch: cur.length });
       }
       this.close();
-    } catch (e) {
+    } catch (e: unknown) {
       console.error(e);
-      new Notice("Authors Toolbox: could not insert image — " + e.message);
+      const msg = e instanceof Error ? e.message : String(e);
+      new Notice("Authors Toolbox: could not insert image — " + msg);
     }
   }
-  onClose() { this.contentEl.empty(); }
+
+  onClose(): void { this.contentEl.empty(); }
 }

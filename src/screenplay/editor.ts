@@ -1,7 +1,7 @@
-import { editorLivePreviewField, EditorSuggest } from "obsidian";
-import { ViewPlugin, Decoration, EditorView, keymap } from "@codemirror/view";
-import { RangeSetBuilder, Prec } from "@codemirror/state";
-import { SP_SCENE, classifyScript, cueName, isScriptFM, isScriptText, isUpperLine, parseHeading, stripInline } from "./fountain.js";
+import { App, Editor, EditorPosition, EditorSuggest, EditorSuggestContext, EditorSuggestTriggerInfo, MarkdownPostProcessorContext, TFile, editorLivePreviewField } from "obsidian";
+import { ViewPlugin, Decoration, DecorationSet, EditorView, ViewUpdate, keymap } from "@codemirror/view";
+import { RangeSetBuilder, Prec, EditorState, Extension } from "@codemirror/state";
+import { ClassifiedScript, SP_SCENE, ScriptFrontmatter, classifyScript, cueName, isScriptFM, isScriptText, isUpperLine, parseHeading, stripInline } from "./fountain";
 
 /* ======================================================================
    SCREENPLAY — editor formatting, reading view, smart Enter, suggestions
@@ -9,18 +9,18 @@ import { SP_SCENE, classifyScript, cueName, isScriptFM, isScriptText, isUpperLin
 
 export const SCRIPTS_FOLDER_DEFAULT = "Scripts";
 
-export function docIsScript(state) {
+export function docIsScript(state: EditorState): boolean {
   return isScriptText(state.doc.sliceString(0, Math.min(state.doc.length, 3000)));
 }
 
-export function buildSpDecorations(view) {
-  const b = new RangeSetBuilder();
+export function buildSpDecorations(view: EditorView): DecorationSet {
+  const b = new RangeSetBuilder<Decoration>();
   const state = view.state;
   if (!docIsScript(state)) return b.finish();
   const doc = state.doc;
   const { types } = classifyScript(doc.toString());
   let live = false;
-  try { live = !!(editorLivePreviewField && state.field(editorLivePreviewField, false)); } catch { live = false; }
+  try { live = !!state.field(editorLivePreviewField, false); } catch { live = false; }
   const head = doc.lineAt(state.selection.main.head).number - 1;
   for (const { from, to } of view.visibleRanges) {
     let n = doc.lineAt(from).number - 1;
@@ -39,18 +39,19 @@ export function buildSpDecorations(view) {
   return b.finish();
 }
 
-export const spView = ViewPlugin.fromClass(
+export const spView: Extension = ViewPlugin.fromClass(
   class {
-    constructor(view) { this.decorations = buildSpDecorations(view); }
-    update(u) { if (u.docChanged || u.selectionSet || u.viewportChanged) this.decorations = buildSpDecorations(u.view); }
+    decorations: DecorationSet;
+    constructor(view: EditorView) { this.decorations = buildSpDecorations(view); }
+    update(u: ViewUpdate): void { if (u.docChanged || u.selectionSet || u.viewportChanged) this.decorations = buildSpDecorations(u.view); }
   },
   { decorations: (v) => v.decorations }
 );
 
-export const spAttrs = EditorView.editorAttributes.compute(["doc"], (state) => (docIsScript(state) ? { class: "sp-script" } : {}));
+export const spAttrs: Extension = EditorView.editorAttributes.compute(["doc"], (state: EditorState): Record<string, string> => (docIsScript(state) ? { class: "sp-script" } : {}));
 
 /** Final Draft-style Enter: after a character cue or parenthetical stay in the dialogue block; elsewhere start a new element. */
-export function smartEnter(view) {
+export function smartEnter(view: EditorView): boolean {
   const st = view.state;
   if (!docIsScript(st)) return false;
   const sel = st.selection.main;
@@ -70,14 +71,15 @@ export function smartEnter(view) {
   view.dispatch({ changes: { from: sel.head, insert }, selection: { anchor: sel.head + insert.length }, scrollIntoView: true, userEvent: "input" });
   return true;
 }
-export const spKeymap = Prec.high(keymap.of([{ key: "Enter", run: smartEnter }]));
+export const spKeymap: Extension = Prec.high(keymap.of([{ key: "Enter", run: smartEnter }]));
 
 /* ---------- reading view ---------- */
 
-export function renderInlineInto(parent, s) {
+export function renderInlineInto(parent: HTMLElement, s: string): void {
   s = s.replace(/%%[^%]*%%/g, "").replace(/\[\[([^\]|]*\|)?([^\]]*)\]\]/g, "$2");
   const re = /(\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*\s][^*]*\*|_[^_\s][^_]*_)/g;
-  let last = 0, m;
+  let last = 0;
+  let m: RegExpExecArray | null;
   while ((m = re.exec(s))) {
     if (m.index > last) parent.appendText(s.slice(last, m.index));
     const tok = m[0];
@@ -90,28 +92,30 @@ export function renderInlineInto(parent, s) {
   if (last < s.length) parent.appendText(s.slice(last));
 }
 
-export let spCache = { text: null, res: null };
-export function classifyCached(text) {
-  if (spCache.text !== text) spCache = { text, res: classifyScript(text) };
+export let spCache: { text: string; res: ClassifiedScript } | null = null;
+export function classifyCached(text: string): ClassifiedScript {
+  if (!spCache || spCache.text !== text) spCache = { text, res: classifyScript(text) };
   return spCache.res;
 }
 
-export function spPostProcess(el, ctx) {
-  if (!isScriptFM(ctx.frontmatter)) return;
+export function spPostProcess(el: HTMLElement, ctx: MarkdownPostProcessorContext): void {
+  const fm = ctx.frontmatter as ScriptFrontmatter | null | undefined;
+  if (!isScriptFM(fm)) return;
   const info = ctx.getSectionInfo(el);
   if (!info) return;
   const { lines, types } = classifyCached(info.text);
-  const rows = [];
-  for (let n = info.lineStart; n <= info.lineEnd; n++) if (types[n] && types[n].t !== "meta" && types[n].t !== "section") rows.push(n);
+  const rows: number[] = [];
+  for (let n = info.lineStart; n <= info.lineEnd; n++) if (types[n] && types[n]?.t !== "meta" && types[n]?.t !== "section") rows.push(n);
   if (!rows.length) return;
   if (el.querySelector(".callout, .frontmatter, .metadata-container, img, .internal-embed, ul, ol, pre, table")) return;
   el.empty();
   el.addClass("sp-sec");
-  let block = null, blockId = -1;
+  let block: HTMLElement | null = null, blockId = -1;
   for (const n of rows) {
     const x = types[n];
+    if (!x) continue;
     if (x.block !== blockId) {
-      blockId = x.block;
+      blockId = x.block ?? -1;
       const dlg = x.t === "character";
       block = el.createDiv({ cls: "sp-block" + (dlg ? " sp-block-dialogue" : "") });
     }
@@ -120,6 +124,7 @@ export function spPostProcess(el, ctx) {
     if (x.markEnd) body = body.slice(0, body.length - x.markEnd);
     if (x.mark) body = body.slice(x.mark);
     body = body.trim();
+    if (!block) continue;
     const d = block.createDiv({ cls: `sp-el sp-${x.t}` });
     if (x.t === "pagebreak") continue;
     renderInlineInto(d, body);
@@ -128,9 +133,14 @@ export function spPostProcess(el, ctx) {
 
 /* ---------- suggestions for character cues and scene headings ---------- */
 
-export class ScriptSuggest extends EditorSuggest {
-  constructor(app, plugin) { super(app); this.plugin = plugin; this.limit = 12; }
-  onTrigger(cursor, editor, file) {
+export class ScriptSuggest extends EditorSuggest<string> {
+  plugin: unknown;
+  constructor(app: App, plugin: unknown) {
+    super(app);
+    this.plugin = plugin;
+    this.limit = 12;
+  }
+  onTrigger(cursor: EditorPosition, editor: Editor, file: TFile | null): EditorSuggestTriggerInfo | null {
     if (!file) return null;
     const fm = (this.app.metadataCache.getFileCache(file) || {}).frontmatter;
     if (!isScriptFM(fm)) return null;
@@ -143,13 +153,19 @@ export class ScriptSuggest extends EditorSuggest {
     if (t.length >= 1 && /\p{L}/u.test(t) && !/\p{Ll}/u.test(t.replace(/^@/, "")) && !/:/.test(t)) return { start: { line: cursor.line, ch: 0 }, end: cursor, query: line };
     return null;
   }
-  getSuggestions(ctx) {
+  getSuggestions(ctx: EditorSuggestContext): string[] {
     const text = ctx.editor.getValue();
     const { lines, types } = classifyScript(text);
     const q = ctx.query.toUpperCase();
     if (/^\.?(INT|EXT|EST|I\/E)/.test(q)) {
-      const heads = new Set(), times = new Set(["DAY", "NIGHT"]);
-      types.forEach((x, n) => { if (x && x.t === "scene" && n !== ctx.start.line) { const h = parseHeading(stripInline(lines[n])); if (h.location) heads.add(h.location); if (h.time) times.add(h.time); } });
+      const heads = new Set<string>(), times = new Set<string>(["DAY", "NIGHT"]);
+      types.forEach((x, n) => {
+        if (x && x.t === "scene" && n !== ctx.start.line) {
+          const h = parseHeading(stripInline(lines[n]));
+          if (h.location) heads.add(h.location);
+          if (h.time) times.add(h.time);
+        }
+      });
       if (/[-–—]\s*\S*$/.test(q) && / [-–—] /.test(q)) {
         const base = q.replace(/\s*[-–—]\s*\S*$/, "");
         const typed = (/[-–—]\s*(\S*)$/.exec(q) || ["", ""])[1];
@@ -160,15 +176,15 @@ export class ScriptSuggest extends EditorSuggest {
       const prefix = m[1].replace(/^\./, "").replace(/([A-Z])$/, "$1.");
       return [...heads].filter((h) => h.startsWith(m[2])).sort().map((h) => `${prefix} ${h} - `);
     }
-    const names = new Set();
+    const names = new Set<string>();
     types.forEach((x, n) => { if (x && x.t === "character" && n !== ctx.start.line) names.add(cueName(lines[n])); });
     const qn = q.replace(/^@/, "").trim();
     const out = [...names].filter((n) => n.startsWith(qn) && n !== qn).sort();
     if (names.has(qn)) out.unshift(...["(V.O.)", "(O.S.)", "(CONT'D)"].map((e) => `${qn} ${e}`));
     return out;
   }
-  renderSuggestion(v, el) { el.setText(v); }
-  selectSuggestion(v) {
+  renderSuggestion(v: string, el: HTMLElement): void { el.setText(v); }
+  selectSuggestion(v: string): void {
     const ctx = this.context;
     if (!ctx) return;
     ctx.editor.replaceRange(v, ctx.start, ctx.end);
@@ -176,8 +192,18 @@ export class ScriptSuggest extends EditorSuggest {
   }
 }
 
-export function scriptTemplate(o) {
-  const y = (v) => '"' + String(v).replace(/"/g, '\\"') + '"';
+export interface ScriptTemplateOptions {
+  title: string;
+  date: string;
+  author?: string;
+  guide?: boolean;
+  format?: string;
+  adapted?: string;
+  lang?: string;
+}
+
+export function scriptTemplate(o: ScriptTemplateOptions): string {
+  const y = (v: string | number | boolean | undefined | null): string => '"' + (v != null ? String(v) : "").replace(/"/g, '\\"') + '"';
   const es = o.lang === "es";
   return [
     "---",
@@ -214,5 +240,5 @@ export function scriptTemplate(o) {
     "",
     es ? "CORTE A:" : "CUT TO:",
     "",
-  ].filter((l) => l !== null).join("\n");
+  ].filter((l): l is string => l !== null).join("\n");
 }

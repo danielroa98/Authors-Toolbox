@@ -1,25 +1,27 @@
 import { editorInfoField } from "obsidian";
 import { EditorView } from "@codemirror/view";
-import { isScriptText } from "../screenplay/fountain.js";
-import { HR_RE } from "../text/analysis.js";
+import type { EditorState, Extension } from "@codemirror/state";
+import type { ToolboxPrefs } from "../constants";
+import { isScriptText } from "../screenplay/fountain";
+import { HR_RE } from "../text/analysis";
 
 /* ======================================================================
    SPANISH DIALOGUE DASH (raya) — in story notes, a "-" typed at the start of a line becomes "—",
    so Obsidian doesn't turn the line into a bullet list; "--" anywhere becomes "—".
    ====================================================================== */
 
-export function isStoryState(state, folders) {
+export function isStoryState(state: EditorState, folders: string[]): boolean {
   const head = state.doc.sliceString(0, Math.min(state.doc.length, 3000));
   if (isScriptText(head)) return false;
   const m = /^---\n([\s\S]*?)\n---/.exec(head);
   if (m && /^type:\s*["']?(\[\[)?(story|relato|cuento|novel|novela|novella|chapter|capítulo)(\]\])?["']?\s*$/mi.test(m[1])) return true;
   if (m && /^type:\s*\n\s*-\s*["']?(story|relato|cuento|novela?)["']?\s*$/mi.test(m[1])) return true;
   let path = "";
-  try { const info = state.field(editorInfoField, false); path = (info && info.file && info.file.path) || ""; } catch { /* ignore */ }
+  try { const info = state.field(editorInfoField, false); path = info?.file?.path ?? ""; } catch { /* ignore */ }
   return !!path && folders.some((f) => f && path.startsWith(f.replace(/\/+$/, "") + "/"));
 }
 
-export function rayaExtension(plugin) {
+export function rayaExtension(plugin: { prefs: ToolboxPrefs }): Extension {
   return EditorView.inputHandler.of((view, from, to, text) => {
     if (text !== "-" || from !== to || !plugin.prefs.autoRaya) return false;
     const folders = String(plugin.prefs.storyFolders || "").split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
@@ -41,7 +43,7 @@ export function rayaExtension(plugin) {
 }
 
 /** Turn existing "- text" / "-text" dialogue lines in the body into "—text". Returns number of lines changed. */
-export function convertDialogueDashes(text) {
+export function convertDialogueDashes(text: string): { text: string; changed: number } {
   const lines = text.split("\n");
   let i = 0, n = 0, fence = false;
   if (lines[0] === "---") { i = 1; while (i < lines.length && !/^(---|\.\.\.)\s*$/.test(lines[i])) i++; i++; }

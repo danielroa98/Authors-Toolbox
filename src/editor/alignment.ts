@@ -1,19 +1,19 @@
-import { Notice, editorLivePreviewField } from "obsidian";
-import { ViewPlugin, Decoration } from "@codemirror/view";
+import { Editor, Notice, editorLivePreviewField } from "obsidian";
+import { ViewPlugin, Decoration, DecorationSet, EditorView, ViewUpdate } from "@codemirror/view";
 import { RangeSetBuilder } from "@codemirror/state";
-import { MARK } from "../constants.js";
+import { MARK, type AlignTarget } from "../constants";
 
 /* ---------- alignment logic: one hidden marker per paragraph ---------- */
 
 export const SKIP_START = /^(\s*)(>|\||```|~~~|<|---\s*$|\*\*\*\s*$|[-+*]\s|\d+[.)]\s|!\[\[[^\]]*\]\]\s*$|\$\$)/;
 
-export function frontmatterEnd(editor) {
+export function frontmatterEnd(editor: Editor): number {
   if (editor.getLine(0) !== "---") return -1;
   for (let i = 1; i <= editor.lastLine(); i++) if (editor.getLine(i) === "---") return i;
   return -1;
 }
 
-export function applyAlign(editor, target) {
+export function applyAlign(editor: Editor, target: AlignTarget): void {
   const sel = editor.listSelections()[0];
   const a = sel.anchor, h = sel.head;
   let from = Math.min(a.line, h.line), to = Math.max(a.line, h.line);
@@ -24,7 +24,7 @@ export function applyAlign(editor, target) {
   while (to < editor.lastLine() && editor.getLine(to + 1).trim() !== "") to++;
 
   const fmEnd = frontmatterEnd(editor);
-  const starts = [];
+  const starts: number[] = [];
   let inFence = false;
   for (let i = 0; i <= to; i++) {
     const t = editor.getLine(i);
@@ -36,9 +36,9 @@ export function applyAlign(editor, target) {
     if (SKIP_START.test(t) && !MARK.test(t)) continue;
     starts.push(i);
   }
-  if (!starts.length) { new Notice("Place the cursor in a paragraph or select some text first."); return; }
+  if (!starts.length) { new Notice("Click inside a paragraph or select some text first."); return; }
 
-  const current = (i) => { const m = MARK.exec(editor.getLine(i)); return m ? m[2] : "none"; };
+  const current = (i: number): string => { const m = MARK.exec(editor.getLine(i)); return m ? m[2] : "none"; };
   let newMode = target;
   if (target !== "none" && starts.every((i) => current(i) === target)) newMode = "none"; // toggle off
 
@@ -54,19 +54,19 @@ export function applyAlign(editor, target) {
 
 /* ---------- Live Preview / Source mode: centre the paragraph lines ---------- */
 
-export function buildDecorations(view) {
-  const b = new RangeSetBuilder();
+export function buildDecorations(view: EditorView): DecorationSet {
+  const b = new RangeSetBuilder<Decoration>();
   const state = view.state;
   const doc = state.doc;
   let live = false;
-  try { live = !!(editorLivePreviewField && state.field(editorLivePreviewField, false)); } catch { live = false; }
+  try { live = !!state.field(editorLivePreviewField, false); } catch { live = false; }
   const headLine = doc.lineAt(state.selection.main.head).number;
-  let cur = null, first = true;
+  let cur: string | null = null, first = true;
   for (let n = 1; n <= doc.lines; n++) {
     const line = doc.line(n);
     const t = line.text;
     if (t.trim() === "") { first = true; cur = null; continue; }
-    let m = null;
+    let m: RegExpExecArray | null = null;
     if (first) { m = MARK.exec(t); cur = m ? m[2] : null; first = false; }
     if (!cur) continue;
     b.add(line.from, line.from, Decoration.line({ class: `at-line-${cur}` }));
@@ -81,8 +81,9 @@ export function buildDecorations(view) {
 
 export const alignView = ViewPlugin.fromClass(
   class {
-    constructor(view) { this.decorations = buildDecorations(view); }
-    update(u) { if (u.docChanged || u.selectionSet || u.viewportChanged) this.decorations = buildDecorations(u.view); }
+    decorations: DecorationSet;
+    constructor(view: EditorView) { this.decorations = buildDecorations(view); }
+    update(u: ViewUpdate) { if (u.docChanged || u.selectionSet || u.viewportChanged) this.decorations = buildDecorations(u.view); }
   },
   { decorations: (v) => v.decorations }
 );

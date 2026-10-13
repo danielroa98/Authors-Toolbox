@@ -241,31 +241,32 @@ Prose formatting gets in the way of poetry. Markdown merges lines, eats indentat
 npm install
 npm run dev     # rebuild main.js on every change (copy or symlink the folder into a test vault)
 npm run lint    # Obsidian's official ESLint rules (the same checks as the directory's automated review)
-npm run build   # production build → main.js
+npm run typecheck  # TypeScript strict-mode check
+npm run build   # type-check + production build → main.js
 ```
 
-Source layout (plain JavaScript ES modules, bundled by esbuild into `main.js`):
+Source layout (TypeScript in strict mode, bundled by esbuild into `main.js`):
 
 ```
 src/
-├── main.js                  # plugin entry: commands, events, panel state, grammar check, screenplay commands
-├── constants.js             # defaults and shared constants
-├── settings.js              # settings tab
-├── text/analysis.js         # pure text analysis: prose map, stats, readability, style, outline, LanguageTool chunks
+├── main.ts                  # plugin entry: commands, events, panel state, grammar check, screenplay commands
+├── constants.ts             # defaults and shared constants
+├── settings.ts              # settings tab
+├── text/analysis.ts         # pure text analysis: prose map, stats, readability, style, outline, LanguageTool chunks
 ├── screenplay/
-│   ├── fountain.js          # Fountain parser, script analysis, scene outline, .fountain export
-│   ├── editor.js            # editor formatting, smart Enter, suggestions, Reading view, script template
-│   └── panel.js             # writing-panel tabs for scripts
+│   ├── fountain.ts          # Fountain parser, script analysis, scene outline, .fountain export
+│   ├── editor.ts            # editor formatting, smart Enter, suggestions, Reading view, script template
+│   └── panel.ts             # writing-panel tabs for scripts
 ├── editor/
-│   ├── alignment.js         # per-paragraph alignment markers and decorations
-│   ├── issues.js            # grammar underlines and find highlights (CodeMirror state)
-│   └── raya.js              # Spanish dialogue dash
+│   ├── alignment.ts         # per-paragraph alignment markers and decorations
+│   ├── issues.ts            # grammar underlines and find highlights (CodeMirror state)
+│   └── raya.ts              # Spanish dialogue dash
 ├── view/
-│   ├── writing-view.js      # the writing panel
-│   └── helpers.js           # formatting helpers and labels
+│   ├── writing-view.ts      # the writing panel
+│   └── helpers.ts           # formatting helpers and labels
 └── modals/
-    ├── insert-image.js
-    └── prompts.js
+    ├── insert-image.ts
+    └── prompts.ts
 ```
 
 ### Releasing

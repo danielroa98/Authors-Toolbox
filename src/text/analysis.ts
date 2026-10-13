@@ -2,6 +2,276 @@
    TEXT CORE — pure functions (no Obsidian dependencies)
    ====================================================================== */
 
+/* ---------- types ---------- */
+
+/** Supported analysis languages. */
+export type Lang = "en" | "es";
+
+/** One piece of the document: text ('t') or markup ('m'). `i` = LanguageTool interpretAs for markup. */
+export interface Piece {
+  k: "t" | "m";
+  s: string;
+  from: number;
+  i?: string;
+}
+
+/** Maps a run of a paragraph's plain text (p) to document offset (d), n chars long. */
+export interface ParaSeg {
+  p: number;
+  d: number;
+  n: number;
+}
+
+export type ParaKind = "para" | "heading" | "quote" | "list";
+
+/** A prose block extracted from the markdown. */
+export interface Para {
+  kind: ParaKind;
+  fromLine: number;
+  toLine: number;
+  plain: string;
+  segs: ParaSeg[];
+  /** Internal while building (deleted before the paragraph is emitted). */
+  gap?: boolean;
+  /** Word count — set by analyze() on non-heading paragraphs. */
+  words?: number;
+}
+
+/** A non-heading paragraph after analyze() has counted its words. */
+export type AnalyzedPara = Para & { words: number };
+
+export interface ProseMap {
+  pieces: Piece[];
+  paras: Para[];
+}
+
+export interface Readability {
+  name: "INFLESZ" | "Flesch";
+  score: number;
+  label: string;
+  /** Flesch-Kincaid grade (English only). */
+  grade?: number;
+}
+
+/** [start, end) offsets into a string. */
+export type Range = [number, number];
+
+export interface WordToken {
+  w: string;
+  lw: string;
+  para: number;
+  a: number;
+  b: number;
+}
+
+export interface Sentence {
+  para: number;
+  a: number;
+  b: number;
+  n: number;
+  opener: string;
+}
+
+export interface NameEntry {
+  word: string;
+  shown: string;
+  count: number;
+}
+
+export interface EchoEntry {
+  word: string;
+  count: number;
+  idx: number[];
+}
+
+export interface AdverbEntry {
+  word: string;
+  idx: number[];
+}
+
+export interface CrutchHit {
+  para: number;
+  a: number;
+  b: number;
+}
+
+export interface CrutchEntry {
+  word: string;
+  hits: CrutchHit[];
+}
+
+export interface OpenerRun {
+  word: string;
+  sents: Sentence[];
+}
+
+export interface ParaWordCount {
+  i: number;
+  n: number;
+}
+
+export type CrutchLists = Record<Lang, string>;
+
+export interface AnalyzeOptions {
+  /** Language code, or "auto" (default) to detect. */
+  lang?: string;
+  echoWindow?: number;
+  crutch?: CrutchLists;
+  longSentence?: number;
+}
+
+export interface Analysis {
+  lang: Lang;
+  paras: AnalyzedPara[];
+  allParas: Para[];
+  W: WordToken[];
+  S: Sentence[];
+  words: number;
+  chars: number;
+  charsNoSp: number;
+  paragraphs: number;
+  sentences: number;
+  avgSentence: number;
+  sentenceSD: number;
+  lens: number[];
+  avgPara: number;
+  syllables: number;
+  readability: Readability | null;
+  dialogue: number;
+  variety: number;
+  /** [word, count] */
+  top: [string, number][];
+  echoes: EchoEntry[];
+  adverbs: AdverbEntry[];
+  adverbCount: number;
+  crutch: CrutchEntry[];
+  longSentences: Sentence[];
+  longThreshold: number;
+  openers: OpenerRun[];
+  longestParas: ParaWordCount[];
+  names: NameEntry[];
+}
+
+export type LengthCategory = "Flash fiction" | "Short story" | "Novelette" | "Novella" | "Novel";
+
+export interface OutlineHeading {
+  line: number;
+  level: number;
+  title: string;
+}
+
+/** A scene segment while being built (title/id/parent are only set for non-empty ones). */
+export interface SceneSegment {
+  start: number;
+  end: number;
+  hasBreak: boolean;
+  empty?: boolean;
+  title?: string;
+  id?: string;
+  parent?: OutlineNode;
+}
+
+/** A non-empty scene inside an outline node. */
+export interface Scene extends SceneSegment {
+  title: string;
+  id: string;
+  parent: OutlineNode;
+}
+
+export interface OutlineNode {
+  id: string;
+  level: number;
+  title: string;
+  start: number;
+  contentStart: number;
+  end: number;
+  children: OutlineNode[];
+  scenes: Scene[];
+  /** Undefined for the root. */
+  parent?: OutlineNode;
+  /** Scene separator line (set when the node has scene breaks). */
+  sceneSep?: string;
+  /** Whether the text before the first scene break is empty (set when the node has scene breaks). */
+  leadingEmpty?: boolean;
+}
+
+export interface Outline {
+  lines: string[];
+  root: OutlineNode;
+  all: OutlineNode[];
+}
+
+export type ReorderKind = "h" | "s";
+
+export interface ReorderResult {
+  fromLine: number;
+  /** Inclusive. */
+  toLine: number;
+  text: string;
+}
+
+export interface LtTextAnnotation {
+  text: string;
+  markup?: undefined;
+  interpretAs?: undefined;
+}
+
+export interface LtMarkupAnnotation {
+  text?: undefined;
+  markup: string;
+  interpretAs?: string;
+}
+
+export type LtAnnotation = LtTextAnnotation | LtMarkupAnnotation;
+
+export interface LtChunk {
+  /** Document offset of the chunk start. */
+  base: number;
+  text: string;
+  bytes: number;
+  annotation: LtAnnotation[];
+}
+
+/** The subset of a LanguageTool /check match that we use. */
+export interface LtMatch {
+  message?: string;
+  shortMessage?: string;
+  offset: number;
+  length: number;
+  replacements?: { value: string }[];
+  context?: { text?: string; offset: number; length: number };
+  sentence?: string;
+  rule?: {
+    id?: string;
+    description?: string;
+    issueType?: string;
+    category?: { id?: string; name?: string };
+  };
+}
+
+/** The subset of a LanguageTool /check response that we use. */
+export interface LtResponse {
+  matches?: LtMatch[];
+}
+
+export type IssueKind = "spelling" | "grammar" | "punctuation" | "style";
+
+export interface LtIssue {
+  from: number;
+  to: number;
+  text: string;
+  message: string;
+  short: string;
+  replacements: string[];
+  kind: IssueKind;
+  rule: string;
+  ruleName: string;
+  sentence: string;
+  id: string;
+}
+
+/* ---------- constants ---------- */
+
 export const WORD_RE = /[\p{L}\p{M}\p{N}]+(?:[-'’][\p{L}\p{M}\p{N}]+)*/gu;
 export const LETTER_RE = /[\p{L}\p{M}\p{N}]/u;
 export const HR_RE = /^\s{0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/;
@@ -9,7 +279,7 @@ export const SCENE_RE = /^\s{0,3}(?:%%\w+%%)?\s*(?:([-*_])(?:[ \t]*\1){2,}|⁂|#
 export const HEADING_RE = /^(\s{0,3})(#{1,6})[ \t]+(.*)$/;
 export const LIST_RE = /^(\s*)([-+*]|\d+[.)])[ \t]+(\[[ xX]\][ \t]+)?/;
 
-export const STOP = {
+export const STOP: Record<Lang, Set<string>> = {
   en: new Set(("the a an and or but if then so of to in on at by for with from as is was were be been being are am it its it's this that these those " +
     "i me my mine you your yours he him his she her hers we us our ours they them their theirs not no nor do did does done doing have has had having " +
     "there here what which who whom whose when where why how all any some can could would should will shall may might must just than too very into " +
@@ -26,37 +296,38 @@ export const STOP = {
     "entonces cuando ahí allí aquí bien mal sea fuera hacer hizo hace tener tenía tiene tienen poder podía puede pueden decir dice iba ir va").split(" ")),
 };
 
-export const ABBR = new Set(["mr", "mrs", "ms", "dr", "st", "sr", "sra", "srta", "dra", "lic", "ing", "prof", "vs", "etc", "e.g", "i.e", "p", "pp", "no", "núm", "ud", "uds", "av", "col", "jr"]);
+export const ABBR = new Set<string>(["mr", "mrs", "ms", "dr", "st", "sr", "sra", "srta", "dra", "lic", "ing", "prof", "vs", "etc", "e.g", "i.e", "p", "pp", "no", "núm", "ud", "uds", "av", "col", "jr"]);
 
-export const ADVERB_EXC_EN = new Set(("only family early reply apply supply imply comply holy ugly july italy lily belly fly rely ally bully jelly silly lonely " +
+export const ADVERB_EXC_EN = new Set<string>(("only family early reply apply supply imply comply holy ugly july italy lily belly fly rely ally bully jelly silly lonely " +
   "friendly lovely daily likely assembly butterfly curly elderly jolly melancholy monopoly oily rally sly smelly wily chilly hilly ply anomaly emily " +
   "molly sally kelly billy polly holly dolly folly gully tally woolly homily costly deadly lively lowly manly orderly timely worldly ghostly cowardly " +
   "scholarly unlikely unruly burly surly bubbly cuddly prickly wrinkly sickly bodily hourly weekly monthly yearly nightly kindly").split(" "));
-export const ADVERB_EXC_ES = new Set(["mente", "demente", "clemente", "simiente", "vehemente"]);
+export const ADVERB_EXC_ES = new Set<string>(["mente", "demente", "clemente", "simiente", "vehemente"]);
 
-export const DEFAULT_CRUTCH = {
+export const DEFAULT_CRUTCH: CrutchLists = {
   en: "very, really, just, actually, suddenly, quite, somehow, seemed, started to, began to, rather, literally, basically, simply, a little, kind of, sort of",
   es: "muy, realmente, de repente, de pronto, simplemente, básicamente, solamente, empezó a, comenzó a, como que, un poco, algo, totalmente, en realidad, literalmente",
 };
 
-export function words(s) { return s.match(WORD_RE) || []; }
+export function words(s: string): string[] { return s.match(WORD_RE) || []; }
 
 /* ---------- Markdown → prose map (keeps document offsets) ---------- */
 
-export function proseMap(text) {
-  const pieces = [];   // {k:'t'|'m', s, from, i?}  — covers the whole document, in order
-  const paras = [];    // prose blocks: {kind, fromLine, toLine, plain, segs:[{p,d,n}]}
-  let cur = null;
+export function proseMap(text: string): ProseMap {
+  const pieces: Piece[] = [];   // {k:'t'|'m', s, from, i?}  — covers the whole document, in order
+  const paras: Para[] = [];    // prose blocks: {kind, fromLine, toLine, plain, segs:[{p,d,n}]}
+  // (declared via `as` so control-flow analysis doesn't narrow it to `null`; the closures below reassign it)
+  let cur = null as Para | null;
 
-  const pushM = (s, from, ia) => {
+  const pushM = (s: string, from: number, ia?: string): void => {
     if (!s) return;
     const last = pieces[pieces.length - 1];
     if (last && last.k === "m" && last.from + last.s.length === from) {
       last.s += s; if (ia) last.i = (last.i || "") + ia; return;
     }
-    const p = { k: "m", s, from }; if (ia) p.i = ia; pieces.push(p);
+    const p: Piece = { k: "m", s, from }; if (ia) p.i = ia; pieces.push(p);
   };
-  const pushT = (s, from) => {
+  const pushT = (s: string, from: number): void => {
     if (!s) return;
     const last = pieces[pieces.length - 1];
     if (last && last.k === "t" && last.from + last.s.length === from) last.s += s;
@@ -70,21 +341,21 @@ export function proseMap(text) {
       cur.plain += s;
     }
   };
-  const endPara = (line) => {
+  const endPara = (line: number): void => {
     if (cur && cur.plain.trim()) { cur.toLine = line; delete cur.gap; paras.push(cur); }
     cur = null;
   };
-  const startPara = (kind, line) => {
+  const startPara = (kind: ParaKind, line: number): void => {
     if (cur && cur.kind === kind) return;
     endPara(line);
     cur = { kind, fromLine: line, toLine: line, plain: "", segs: [], gap: false };
   };
 
   const st = { comment: false };
-  const inline = (s, from) => {
+  const inline = (s: string, from: number): void => {
     let i = 0, buf = "", bufFrom = from;
-    const flush = () => { if (buf) pushT(buf, bufFrom); buf = ""; };
-    const mark = (len, ia) => { flush(); pushM(s.substr(i, len), from + i, ia); i += len; bufFrom = from + i; };
+    const flush = (): void => { if (buf) pushT(buf, bufFrom); buf = ""; };
+    const mark = (len: number, ia?: string): void => { flush(); pushM(s.slice(i, i + len), from + i, ia); i += len; bufFrom = from + i; };
     while (i < s.length) {
       const c = s[i], rest = s.slice(i);
       if (rest.startsWith("%%")) {
@@ -109,7 +380,7 @@ export function proseMap(text) {
         if (m) { mark(1); pushT(m[1], from + i); i += m[1].length; bufFrom = from + i; mark(2 + m[2].length + 1); continue; }
       }
       if (c === "`") { const j = s.indexOf("`", i + 1); if (j > 0) { mark(j + 1 - i); continue; } }
-      if (c === "<" && /^<\/?[a-zA-Z][^>]*>/.test(rest)) { mark(/^<\/?[a-zA-Z][^>]*>/.exec(rest)[0].length); continue; }
+      if (c === "<") { const tag = /^<\/?[a-zA-Z][^>]*>/.exec(rest); if (tag) { mark(tag[0].length); continue; } }
       if (c === "\\" && i + 1 < s.length && /[!-/:-@[-`{-~]/.test(s[i + 1])) { mark(1); buf += s[i]; i++; continue; }
       if (/^(\*\*|__|~~|==)/.test(rest)) { mark(2); continue; }
       if (c === "*") { mark(1); continue; }
@@ -117,7 +388,7 @@ export function proseMap(text) {
         const pv = i > 0 ? s[i - 1] : " ", nx = i + 1 < s.length ? s[i + 1] : " ";
         if (!(LETTER_RE.test(pv) && LETTER_RE.test(nx))) { mark(1); continue; }
       }
-      if (/^https?:\/\/\S+/.test(rest) && (i === 0 || /\s/.test(s[i - 1]))) { mark(/^https?:\/\/\S+/.exec(rest)[0].length); continue; }
+      if (i === 0 || /\s/.test(s[i - 1])) { const url = /^https?:\/\/\S+/.exec(rest); if (url) { mark(url[0].length); continue; } }
       const bid = /^\s\^[\w-]+\s*$/.exec(rest);
       if (bid) { mark(bid[0].length); continue; }
       if (!buf) bufFrom = from + i;
@@ -153,7 +424,7 @@ export function proseMap(text) {
       endPara(n); pushM(L, from);
     } else {
       callout = false;
-      let m;
+      let m: RegExpExecArray | null;
       if ((m = HEADING_RE.exec(L))) {
         endPara(n); startPara("heading", n);
         const pre = m[1].length + m[2].length + (L.length - m[1].length - m[2].length - m[3].length);
@@ -174,7 +445,7 @@ export function proseMap(text) {
   return { pieces, paras };
 }
 
-export function plainToDoc(para, p) {
+export function plainToDoc(para: Pick<Para, "segs">, p: number): number {
   const segs = para.segs;
   for (let k = 0; k < segs.length; k++) {
     const g = segs[k], nx = segs[k + 1];
@@ -188,7 +459,7 @@ export function plainToDoc(para, p) {
 
 /* ---------- language ---------- */
 
-export function detectLang(sample) {
+export function detectLang(sample: string): Lang {
   let en = 0, es = 0;
   for (const w of words(sample.slice(0, 20000).toLowerCase())) {
     if (STOP.en.has(w)) en++;
@@ -197,11 +468,11 @@ export function detectLang(sample) {
   if (/[ñáéíóú¿¡]/i.test(sample)) es += 3;
   return es > en ? "es" : "en";
 }
-export function baseLang(code) { return String(code || "").toLowerCase().startsWith("es") ? "es" : "en"; }
+export function baseLang(code: string | null | undefined): Lang { return String(code || "").toLowerCase().startsWith("es") ? "es" : "en"; }
 
 /* ---------- syllables / readability ---------- */
 
-export function syllablesEn(w) {
+export function syllablesEn(w: string): number {
   w = w.toLowerCase().replace(/[^a-z]/g, "");
   if (!w) return 0;
   if (w.length <= 3) return 1;
@@ -209,11 +480,11 @@ export function syllablesEn(w) {
   const m = w.match(/[aeiouy]{1,2}/g);
   return Math.max(1, m ? m.length : 1);
 }
-export function syllablesEs(w) {
+export function syllablesEs(w: string): number {
   w = w.toLowerCase().replace(/qu(?=[eiéí])/g, "q").replace(/gu(?=[eiéí])/g, "g").replace(/y$/, "i").replace(/[^a-záéíóúüñ]/g, "");
   if (!w) return 0;
   const V = "aeiouáéíóúü", STRONG = "aeoáéóíú";
-  let n = 0, prev = null;
+  let n = 0, prev: string | null = null;
   for (const ch of w) {
     if (!V.includes(ch)) { prev = null; continue; }
     if (prev === null) n++;
@@ -222,7 +493,7 @@ export function syllablesEs(w) {
   }
   return Math.max(1, n);
 }
-export function readability(lang, nWords, nSent, nSyl) {
+export function readability(lang: Lang, nWords: number, nSent: number, nSyl: number): Readability | null {
   if (!nWords || !nSent) return null;
   const wps = nWords / nSent, spw = nSyl / nWords;
   if (lang === "es") {
@@ -238,10 +509,10 @@ export function readability(lang, nWords, nSent, nSyl) {
 
 /* ---------- sentences & dialogue ---------- */
 
-export function splitSentences(s) {
-  const out = [];
+export function splitSentences(s: string): Range[] {
+  const out: Range[] = [];
   const re = /(?:[.!?]+|…|\.\.\.)+[”"’'»)\]]*(?=\s|$)/g;
-  let start = 0, m;
+  let start = 0, m: RegExpExecArray | null;
   while ((m = re.exec(s))) {
     const end = m.index + m[0].length;
     const before = s.slice(start, m.index);
@@ -257,8 +528,8 @@ export function splitSentences(s) {
   return out.filter(([a, b]) => words(s.slice(a, b)).length > 0);
 }
 
-export function dialogueRanges(s) {
-  const t = s.replace(/^\s+/, ""), lead = s.length - t.length, out = [];
+export function dialogueRanges(s: string): Range[] {
+  const t = s.replace(/^\s+/, ""), lead = s.length - t.length, out: Range[] = [];
   if (/^[—–]/.test(t) || /^-(?=\S)/.test(t)) {
     let on = true, start = lead + 1;
     for (let i = lead + 1; i < s.length; i++) {
@@ -280,14 +551,14 @@ export function dialogueRanges(s) {
   return out;
 }
 
-export function mattr(list, win) {
+export function mattr(list: string[], win: number): number {
   if (!list.length) return 0;
   if (list.length <= win) return new Set(list).size / list.length;
-  const cnt = new Map(); let uniq = 0, sum = 0, n = 0;
+  const cnt = new Map<string, number>(); let uniq = 0, sum = 0, n = 0;
   for (let i = 0; i < list.length; i++) {
     const w = list[i];
     const c = (cnt.get(w) || 0) + 1; cnt.set(w, c); if (c === 1) uniq++;
-    if (i >= win) { const o = list[i - win]; const oc = cnt.get(o) - 1; cnt.set(o, oc); if (oc === 0) uniq--; }
+    if (i >= win) { const o = list[i - win]; const oc = (cnt.get(o) ?? 0) - 1; cnt.set(o, oc); if (oc === 0) uniq--; }
     if (i >= win - 1) { sum += uniq / win; n++; }
   }
   return sum / n;
@@ -295,27 +566,27 @@ export function mattr(list, win) {
 
 /* ---------- full analysis ---------- */
 
-export function parseCrutch(str) {
+export function parseCrutch(str: string | null | undefined): string[] {
   return String(str || "").split(/[,\n]/).map((x) => x.trim().toLowerCase()).filter(Boolean);
 }
 
-export function analyze(text, opts) {
+export function analyze(text: string, opts?: AnalyzeOptions | null): Analysis {
   opts = opts || {};
   const { paras } = proseMap(text);
-  const prose = paras.filter((p) => p.kind !== "heading");
+  const prose: AnalyzedPara[] = paras.filter((p) => p.kind !== "heading").map((p) => Object.assign(p, { words: 0 }));
   const sample = prose.map((p) => p.plain).join("\n");
   const lang = opts.lang && opts.lang !== "auto" ? baseLang(opts.lang) : detectLang(sample);
   const stop = STOP[lang];
   const sylF = lang === "es" ? syllablesEs : syllablesEn;
 
-  const W = [];        // {w, lw, para, a, b}
-  const S = [];        // {para, a, b, n, opener}
+  const W: WordToken[] = [];        // {w, lw, para, a, b}
+  const S: Sentence[] = [];        // {para, a, b, n, opener}
   let chars = 0, charsNoSp = 0, syl = 0, dlgWords = 0;
   prose.forEach((p, pi) => {
     p.words = 0;
     chars += p.plain.length; charsNoSp += p.plain.replace(/\s/g, "").length;
     const dr = dialogueRanges(p.plain);
-    let m; WORD_RE.lastIndex = 0;
+    let m: RegExpExecArray | null; WORD_RE.lastIndex = 0;
     while ((m = WORD_RE.exec(p.plain))) {
       const w = m[0], a = m.index;
       W.push({ w, lw: w.toLowerCase(), para: pi, a, b: a + w.length });
@@ -333,7 +604,7 @@ export function analyze(text, opts) {
   const avgS = nS ? nW / nS : 0;
   const sd = nS ? Math.sqrt(lens.reduce((t, x) => t + (x - avgS) ** 2, 0) / nS) : 0;
   // proper nouns: words that are capitalised (almost) every time they appear mid-sentence
-  const capStat = new Map();
+  const capStat = new Map<string, { cap: number; n: number; shown: string }>();
   for (const x of W) {
     const p = prose[x.para].plain;
     const pre = p.slice(Math.max(0, x.a - 8), x.a);
@@ -344,33 +615,34 @@ export function analyze(text, opts) {
     capStat.set(x.lw, c);
   }
   const proper = new Set([...capStat.entries()].filter(([w, c]) => c.cap >= 1 && c.cap / c.n >= 0.8 && !stop.has(w)).map(([w]) => w));
-  const nameCount = new Map();
+  const nameCount = new Map<string, number>();
   for (const x of W) if (proper.has(x.lw)) nameCount.set(x.lw, (nameCount.get(x.lw) || 0) + 1);
-  const names = [...nameCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15).map(([w, n]) => ({ word: w, shown: capStat.get(w).shown, count: n }));
+  // (every proper noun has a capStat entry, so the `?? w` fallback never applies)
+  const names: NameEntry[] = [...nameCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15).map(([w, n]) => ({ word: w, shown: capStat.get(w)?.shown ?? w, count: n }));
   const content = W.filter((x) => !stop.has(x.lw) && x.lw.length >= 3 && !/^\d+$/.test(x.lw) && !proper.has(x.lw));
 
   // frequency
-  const freq = new Map();
+  const freq = new Map<string, number>();
   for (const x of content) freq.set(x.lw, (freq.get(x.lw) || 0) + 1);
   const top = [...freq.entries()].filter(([, c]) => c >= 3).sort((a, b) => b[1] - a[1]).slice(0, 15);
 
   // echoes: the same content word again within N words
   const win = opts.echoWindow || 40;
-  const lastAt = new Map(), echoes = new Map();
+  const lastAt = new Map<string, number>(), echoes = new Map<string, { word: string; count: number; idx: Set<number> }>();
   W.forEach((x, idx) => {
     if (stop.has(x.lw) || x.lw.length < 4 || /^\d+$/.test(x.lw) || proper.has(x.lw)) return;
     const prev = lastAt.get(x.lw);
     if (prev !== undefined && idx - prev <= win) {
-      const e = echoes.get(x.lw) || { word: x.lw, count: 0, idx: new Set() };
+      const e = echoes.get(x.lw) || { word: x.lw, count: 0, idx: new Set<number>() };
       e.count++; e.idx.add(prev); e.idx.add(idx); echoes.set(x.lw, e);
     }
     lastAt.set(x.lw, idx);
   });
-  const echoList = [...echoes.values()].sort((a, b) => b.count - a.count).slice(0, 12)
+  const echoList: EchoEntry[] = [...echoes.values()].sort((a, b) => b.count - a.count).slice(0, 12)
     .map((e) => ({ word: e.word, count: e.count, idx: [...e.idx].sort((a, b) => a - b) }));
 
   // adverbs
-  const adv = new Map();
+  const adv = new Map<string, AdverbEntry>();
   W.forEach((x, idx) => {
     const isAdv = lang === "es" ? (/mente$/.test(x.lw) && x.lw.length > 6 && !ADVERB_EXC_ES.has(x.lw))
       : (/ly$/.test(x.lw) && x.lw.length > 4 && !ADVERB_EXC_EN.has(x.lw));
@@ -380,12 +652,12 @@ export function analyze(text, opts) {
   const advCount = advList.reduce((t, e) => t + e.idx.length, 0);
 
   // crutch words / phrases
-  const crutch = [];
+  const crutch: CrutchEntry[] = [];
   for (const ph of parseCrutch((opts.crutch || DEFAULT_CRUTCH)[lang])) {
     const re = new RegExp(ph.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"), "giu");
-    const hits = [];
+    const hits: CrutchHit[] = [];
     prose.forEach((p, pi) => {
-      let m; re.lastIndex = 0;
+      let m: RegExpExecArray | null; re.lastIndex = 0;
       while ((m = re.exec(p.plain))) {
         const a = m.index, b = a + m[0].length;
         if ((a > 0 && LETTER_RE.test(p.plain[a - 1])) || (b < p.plain.length && LETTER_RE.test(p.plain[b]))) continue;
@@ -401,7 +673,7 @@ export function analyze(text, opts) {
   const longS = S.filter((s) => s.n > longT).sort((a, b) => b.n - a.n);
 
   // repeated sentence openers (3+ in a row)
-  const openers = [];
+  const openers: OpenerRun[] = [];
   for (let i = 0; i < S.length;) {
     let j = i + 1;
     while (j < S.length && S[j].opener && S[j].opener === S[i].opener) j++;
@@ -410,7 +682,7 @@ export function analyze(text, opts) {
   }
 
   // paragraphs
-  const paraWords = prose.map((p, i) => ({ i, n: p.words })).filter((x) => x.n > 0);
+  const paraWords: ParaWordCount[] = prose.map((p, i) => ({ i, n: p.words })).filter((x) => x.n > 0);
   const longestParas = [...paraWords].sort((a, b) => b.n - a.n).slice(0, 3);
 
   const r = readability(lang, nW, nS, syl);
@@ -425,7 +697,7 @@ export function analyze(text, opts) {
   };
 }
 
-export function lengthCategory(n) {
+export function lengthCategory(n: number): LengthCategory {
   if (n < 1000) return "Flash fiction";
   if (n < 7500) return "Short story";
   if (n < 17500) return "Novelette";
@@ -435,21 +707,21 @@ export function lengthCategory(n) {
 
 /* ---------- outline (headings + scene breaks) and reordering ---------- */
 
-export function bodyStart(lines) {
+export function bodyStart(lines: string[]): number {
   if (lines[0] !== "---") return 0;
   for (let i = 1; i < lines.length; i++) if (/^(---|\.\.\.)\s*$/.test(lines[i])) return i + 1;
   return 0;
 }
 
-export function plainTitle(s) {
+export function plainTitle(s: string): string {
   return s.replace(/%%[^%]*%%/g, "").replace(/!\[\[[^\]]*\]\]/g, "").replace(/\[\[([^\]|]*\|)?([^\]]*)\]\]/g, "$2")
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[*_~=`]/g, "").replace(/\s+/g, " ").trim();
 }
 
-export function buildOutline(text) {
+export function buildOutline(text: string): Outline {
   const lines = text.split("\n");
   const start = bodyStart(lines);
-  const heads = [], breaks = [];
+  const heads: OutlineHeading[] = [], breaks: number[] = [];
   let fence = false, comment = false;
   for (let i = start; i < lines.length; i++) {
     const L = lines[i];
@@ -463,28 +735,28 @@ export function buildOutline(text) {
     if (h) { heads.push({ line: i, level: h[2].length, title: plainTitle(h[3]) || "(untitled)" }); continue; }
     if (SCENE_RE.test(L) && (i === start || lines[i - 1].trim() === "")) breaks.push(i);
   }
-  const root = { id: "", level: 0, start, contentStart: start, end: lines.length, children: [], scenes: [], title: "" };
-  const stack = [root];
+  const root: OutlineNode = { id: "", level: 0, start, contentStart: start, end: lines.length, children: [], scenes: [], title: "" };
+  const stack: OutlineNode[] = [root];
   for (const h of heads) {
     while (stack[stack.length - 1].level >= h.level) stack.pop();
     const parent = stack[stack.length - 1];
-    const node = { id: parent.id + "/h" + parent.children.length, level: h.level, title: h.title, start: h.line, contentStart: h.line + 1, end: lines.length, children: [], scenes: [], parent };
+    const node: OutlineNode = { id: parent.id + "/h" + parent.children.length, level: h.level, title: h.title, start: h.line, contentStart: h.line + 1, end: lines.length, children: [], scenes: [], parent };
     parent.children.push(node); stack.push(node);
   }
-  const all = [];
-  (function walk(n) { all.push(n); n.children.forEach(walk); })(root);
+  const all: OutlineNode[] = [];
+  (function walk(n: OutlineNode): void { all.push(n); n.children.forEach(walk); })(root);
   // end of a heading node = next heading at same or higher level
   for (const n of all) {
     if (n === root) continue;
     const nxt = heads.find((h) => h.line > n.start && h.level <= n.level);
     n.end = nxt ? nxt.line : lines.length;
   }
-  const nonBlank = (a, b) => { for (let i = a; i < b; i++) if (lines[i].trim()) return true; return false; };
+  const nonBlank = (a: number, b: number): boolean => { for (let i = a; i < b; i++) if (lines[i].trim()) return true; return false; };
   for (const n of all) {
     const ownEnd = n.children.length ? n.children[0].start : n.end;
     const bs = breaks.filter((b) => b >= n.contentStart && b < ownEnd);
     if (!bs.length) continue;
-    const segs = [];
+    const segs: SceneSegment[] = [];
     let a = n.contentStart;
     for (const b of bs) { segs.push({ start: a, end: b, hasBreak: a !== n.contentStart }); a = b; }
     segs.push({ start: a, end: ownEnd, hasBreak: true });
@@ -493,9 +765,9 @@ export function buildOutline(text) {
       const from = s.hasBreak ? s.start + 1 : s.start;
       if (!nonBlank(from, s.end)) { s.empty = true; continue; }
       let first = from; while (first < s.end && !lines[first].trim()) first++;
-      s.title = plainTitle(lines[first]).split(/\s+/).slice(0, 7).join(" ") + "…";
-      s.id = n.id + "/s" + k++; s.parent = n;
-      n.scenes.push(s);
+      const title = plainTitle(lines[first]).split(/\s+/).slice(0, 7).join(" ") + "…";
+      const scene: Scene = Object.assign(s, { title, id: n.id + "/s" + k++, parent: n });
+      n.scenes.push(scene);
     }
     n.sceneSep = lines[bs[0]].trim();
     n.leadingEmpty = segs[0].empty;
@@ -503,7 +775,7 @@ export function buildOutline(text) {
   return { lines, root, all };
 }
 
-export function trimBlank(arr) {
+export function trimBlank(arr: string[]): string[] {
   let a = 0, b = arr.length;
   while (a < b && !arr[a].trim()) a++;
   while (b > a && !arr[b - 1].trim()) b--;
@@ -511,51 +783,55 @@ export function trimBlank(arr) {
 }
 
 /** Returns {fromLine, toLine (inclusive), text} replacing that region, or null. kind: 'h' | 's' */
-export function reorder(outline, parentId, kind, fromIdx, toIdx) {
+export function reorder(outline: Outline, parentId: string, kind: ReorderKind, fromIdx: number, toIdx: number): ReorderResult | null {
   const parent = outline.all.find((n) => n.id === parentId);
   if (!parent) return null;
   const L = outline.lines;
-  const items = kind === "h" ? parent.children : parent.scenes;
-  if (fromIdx < 0 || fromIdx >= items.length || toIdx < 0 || toIdx >= items.length || fromIdx === toIdx) return null;
-  const order = items.map((_, i) => i);
+  const count = kind === "h" ? parent.children.length : parent.scenes.length;
+  if (fromIdx < 0 || fromIdx >= count || toIdx < 0 || toIdx >= count || fromIdx === toIdx) return null;
+  const order = Array.from({ length: count }, (_, i) => i);
   const [mv] = order.splice(fromIdx, 1); order.splice(toIdx, 0, mv);
-  let chunks, regionStart, regionEnd;
+  let chunks: string[], regionStart: number, regionEnd: number;
   if (kind === "h") {
+    const items = parent.children;
     chunks = items.map((n) => trimBlank(L.slice(n.start, n.end)).join("\n"));
     regionStart = items[0].start; regionEnd = items[items.length - 1].end;
     const text = order.map((i) => chunks[i]).join("\n\n");
     while (regionEnd > regionStart && !L[regionEnd - 1].trim()) regionEnd--;
     return { fromLine: regionStart, toLine: regionEnd - 1, text };
   }
+  const items = parent.scenes;
+  // (sceneSep is always set on nodes that have scenes)
+  const sceneSep = parent.sceneSep ?? "";
   chunks = items.map((s) => trimBlank(L.slice(s.hasBreak ? s.start + 1 : s.start, s.end)).join("\n"));
-  const sep = "\n\n" + parent.sceneSep + "\n\n";
+  const sep = "\n\n" + sceneSep + "\n\n";
   regionStart = items[0].hasBreak ? items[0].start : items[0].start;
   while (!items[0].hasBreak && regionStart < items[0].end && !L[regionStart].trim()) regionStart++;
   regionEnd = items[items.length - 1].end;
   while (regionEnd > regionStart && !L[regionEnd - 1].trim()) regionEnd--;
   let text = order.map((i) => chunks[i]).join(sep);
-  if (parent.leadingEmpty) text = parent.sceneSep + "\n\n" + text;
+  if (parent.leadingEmpty) text = sceneSep + "\n\n" + text;
   return { fromLine: regionStart, toLine: regionEnd - 1, text };
 }
 
 /* ---------- LanguageTool request building ---------- */
 
-export function utf8len(s) { let n = 0; for (const ch of s) { const c = ch.codePointAt(0); n += c < 0x80 ? 1 : c < 0x800 ? 2 : c < 0x10000 ? 3 : 4; } return n; }
+export function utf8len(s: string): number { let n = 0; for (const ch of s) { const c = ch.codePointAt(0) ?? 0; n += c < 0x80 ? 1 : c < 0x800 ? 2 : c < 0x10000 ? 3 : 4; } return n; }
 
 /** Cut the piece list to [from,to) and split into annotation chunks of at most maxBytes. */
-export function ltChunks(pieces, from, to, maxBytes) {
-  const sel = [];
+export function ltChunks(pieces: Piece[], from: number, to: number, maxBytes: number): LtChunk[] {
+  const sel: Piece[] = [];
   for (const p of pieces) {
     const a = p.from, b = p.from + p.s.length;
     if (b <= from || a >= to) continue;
     const s = p.s.slice(Math.max(0, from - a), Math.min(p.s.length, to - a));
-    const q = { k: p.k, s, from: Math.max(a, from) };
+    const q: Piece = { k: p.k, s, from: Math.max(a, from) };
     if (p.i) q.i = p.s === s ? p.i : (s.includes("\n") ? "\n" : "");
     sel.push(q);
   }
-  const chunks = [];
-  let cur = [], bytes = 0;
-  const close = () => { if (cur.some((x) => x.k === "t" && x.s.trim())) chunks.push(cur); cur = []; bytes = 0; };
+  const chunks: Piece[][] = [];
+  let cur: Piece[] = [], bytes = 0;
+  const close = (): void => { if (cur.some((x) => x.k === "t" && x.s.trim())) chunks.push(cur); cur = []; bytes = 0; };
   for (const p of sel) {
     const b = utf8len(p.s);
     if (bytes + b > maxBytes && cur.length) {
@@ -587,11 +863,11 @@ export function ltChunks(pieces, from, to, maxBytes) {
     base: c[0].from,
     text: c.map((x) => x.s).join(""),
     bytes: c.reduce((t, x) => t + utf8len(x.s), 0),
-    annotation: c.map((x) => (x.k === "t" ? { text: x.s } : x.i ? { markup: x.s, interpretAs: x.i } : { markup: x.s })),
+    annotation: c.map((x): LtAnnotation => (x.k === "t" ? { text: x.s } : x.i ? { markup: x.s, interpretAs: x.i } : { markup: x.s })),
   }));
 }
 
-export function issueKind(m) {
+export function issueKind(m: LtMatch): IssueKind {
   const t = (m.rule && m.rule.issueType) || "";
   const cat = (m.rule && m.rule.category && m.rule.category.id) || "";
   if (t === "misspelling" || cat === "TYPOS") return "spelling";
@@ -601,7 +877,7 @@ export function issueKind(m) {
 }
 
 /** Map LanguageTool matches back to document offsets; verifies the text and relocates if it drifted. */
-export function chunkPlainToDoc(chunk, off) {
+export function chunkPlainToDoc(chunk: LtChunk, off: number): number {
   // LanguageTool's internal plain text = text pieces + interpretAs of markup
   let p = 0, d = chunk.base;
   for (const a of chunk.annotation) {
@@ -618,20 +894,20 @@ export function chunkPlainToDoc(chunk, off) {
 }
 
 /** Map LanguageTool matches back to document offsets; verifies the text and relocates if it drifted. */
-export function mapMatches(json, chunk, docText) {
-  const out = [];
+export function mapMatches(json: LtResponse | null | undefined, chunk: LtChunk, docText: string): LtIssue[] {
+  const out: LtIssue[] = [];
   for (const m of (json && json.matches) || []) {
     const ctx = m.context;
-    const expected = ctx && typeof ctx.text === "string" ? ctx.text.substr(ctx.offset, ctx.length) : chunk.text.substr(m.offset, m.length);
+    const expected = ctx && typeof ctx.text === "string" ? ctx.text.slice(ctx.offset, ctx.offset + ctx.length) : chunk.text.slice(m.offset, m.offset + m.length);
     const len = expected.length;
     if (!len) continue;
     const cands = [chunk.base + m.offset, chunkPlainToDoc(chunk, m.offset)];
     let from = -1;
-    for (const c of cands) if (docText.substr(c, len) === expected) { from = c; break; }
+    for (const c of cands) if (docText.slice(c, c + len) === expected) { from = c; break; }
     for (let dd = 1; dd < 400 && from < 0; dd++) {
       for (const c of cands) {
-        if (docText.substr(c - dd, len) === expected) { from = c - dd; break; }
-        if (docText.substr(c + dd, len) === expected) { from = c + dd; break; }
+        if (docText.slice(c - dd, c - dd + len) === expected) { from = c - dd; break; }
+        if (docText.slice(c + dd, c + dd + len) === expected) { from = c + dd; break; }
       }
     }
     if (from < 0) continue;
@@ -640,6 +916,7 @@ export function mapMatches(json, chunk, docText) {
       replacements: (m.replacements || []).slice(0, 6).map((r) => r.value),
       kind: issueKind(m), rule: (m.rule && m.rule.id) || "", ruleName: (m.rule && m.rule.description) || "",
       sentence: m.sentence || "",
+      id: "",
     });
   }
   return out;
