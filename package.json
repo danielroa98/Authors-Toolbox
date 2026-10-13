@@ -1,0 +1,29 @@
+{
+  "name": "authors-toolbox",
+  "version": "1.4.0",
+  "description": "Obsidian plugin: writing tools for fiction writers and screenwriters.",
+  "private": true,
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production",
+    "lint": "eslint src"
+  },
+  "author": "Daniel Roa",
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "eslint": "9.39.5",
+    "eslint-plugin-obsidianmd": "0.4.2",
+    "globals": "14.0.0",
+    "obsidian": "1.14.4",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.2",
+    "@codemirror/state": "6.7.6",
+    "@codemirror/view": "6.43.13"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danielroa98/Authors-Toolbox.git"
+  },
+  "homepage": "https://github.com/danielroa98/Authors-Toolbox#readme"
+}

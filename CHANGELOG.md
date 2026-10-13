@@ -1,0 +1,36 @@
+# Changelog
+
+## 1.4.0 — 2026-10-13
+First public release.
+- Source split into ES modules and bundled with esbuild; passes Obsidian's official ESLint rules.
+- No vault-specific defaults:
+  - Uploaded images follow Obsidian's attachment location unless a folder is set.
+  - The scripts folder, story folders and author name are settings.
+- Styling moved from inline styles to CSS variables, so themes can override it.
+- New script notes link to a "Screenplay Format Guide" note only when one exists in the vault.
+
+## 1.3.1
+- **Spanish dialogue dash:** in story notes, a `-` typed at the start of a line becomes `—` (no more accidental bullet lists), and `--` becomes `—`.
+- New command: *Convert dialogue dashes (- → —) in this note*.
+
+## 1.3.0
+- **Screenplay mode (Fountain):**
+  - Screenplay layout in the editor and in Reading view.
+  - Smart Enter.
+  - Suggestions for character names and locations.
+  - *Format line as…* commands.
+  - Script, Scenes, Cast and Notes tabs in the writing panel.
+  - *New script*, *Adapt this story into a script* and *Export as .fountain*.
+- Print / PDF styles for scripts.
+
+## 1.2.0
+- **Writing panel:** Stats, Outline (drag to reorder chapters and scenes), Style and Check tabs.
+- **Spelling and grammar** in English and Spanish via LanguageTool, on demand, with editor underlines and quick fixes.
+- Language per note (`lang` property) with auto-detection.
+
+## 1.1.0
+- Alignment uses one hidden marker per paragraph, so it works in Reading view and no longer groups paragraphs together.
+
+## 1.0.0
+- Center / right / left / justify selected paragraphs.
+- Insert images into a note with width, alignment and caption.
