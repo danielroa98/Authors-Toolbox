@@ -21,8 +21,8 @@ export function isStoryState(state, folders) {
 
 export function rayaExtension(plugin) {
   return EditorView.inputHandler.of((view, from, to, text) => {
-    if (text !== "-" || from !== to || !plugin.settings.autoRaya) return false;
-    const folders = String(plugin.settings.storyFolders || "").split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
+    if (text !== "-" || from !== to || !plugin.prefs.autoRaya) return false;
+    const folders = String(plugin.prefs.storyFolders || "").split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
     if (!isStoryState(view.state, folders)) return false;
     const line = view.state.doc.lineAt(from);
     const before = line.text.slice(0, from - line.from);

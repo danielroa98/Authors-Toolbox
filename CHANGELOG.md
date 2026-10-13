@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.3 — 2026-10-13
+- Requires Obsidian **1.7.2** or later. The plugin uses APIs added in 1.4.4–1.7.2, and the directory review checks that `minAppVersion` covers them.
+- Internal: the plugin's settings object is now `prefs`. Obsidian 1.13 reserves `Plugin.settings`, so the old name clashed with it. Saved settings are unaffected.
+- Lint mirrors the directory's type-aware checks (`tsconfig.json`, type-aware rules applied to the JavaScript sources).
+
 ## 1.4.2 — 2026-10-13
 - Stylesheet cleaned up for the directory's CSS review:
   - No `!important`; overrides now use more specific selectors.

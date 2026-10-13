@@ -9,8 +9,8 @@ export class InsertImageModal extends Modal {
     this.plugin = plugin; this.editor = editor; this.view = view;
     this.file = null;       // existing TFile from vault
     this.upload = null;     // File from disk
-    this.width = plugin.settings.defaultWidth;
-    this.align = plugin.settings.defaultAlign;
+    this.width = plugin.prefs.defaultWidth;
+    this.align = plugin.prefs.defaultAlign;
     this.caption = "";
   }
   onOpen() {
@@ -32,7 +32,7 @@ export class InsertImageModal extends Modal {
     up.addButton((b) => b.setButtonText("Choose file…").onClick(() => input.click()));
     contentEl.appendChild(input);
 
-    contentEl.createEl("div", { text: "…or pick an image already in the vault", cls: "setting-item-description" });
+    contentEl.createDiv({ text: "…or pick an image already in the vault", cls: "setting-item-description" });
     const search = contentEl.createEl("input", { type: "text", placeholder: "Filter by name" });
     search.addClass("at-full");
     this.list = contentEl.createEl("select");

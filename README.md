@@ -2,7 +2,7 @@
 
 **Writing tools for fiction writers and screenwriters in [Obsidian](https://obsidian.md).** It adds a writing panel with statistics, a reorderable outline, style insights and an English/Spanish spelling and grammar check. It also covers paragraph alignment, images in the text, Spanish dialogue dashes, and a complete screenplay mode based on [Fountain](https://fountain.io).
 
-It works on **macOS, Windows, Linux, iPhone and iPad**. It uses no Node.js or Electron APIs, and every control is touch-friendly.
+It works on **macOS, Windows, Linux, iPhone and iPad** and requires Obsidian 1.7.2 or later. It uses no Node.js or Electron APIs, and every control is touch-friendly.
 
 ---
 

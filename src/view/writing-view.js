@@ -48,7 +48,7 @@ export class WritingView extends ItemView {
       ? [["sp-stats", "clapperboard", "Script"], ["sp-scenes", "list-video", "Scenes"], ["sp-cast", "users", "Cast"], ["sp-notes", "lightbulb", "Notes"], ["check", "spell-check", "Check"]]
       : [["overview", "bar-chart-2", "Stats"], ["outline", "list-tree", "Outline"], ["style", "sparkles", "Style"], ["check", "spell-check", "Check"]];
     const tabKey = isSp ? "panelTabScript" : "panelTab";
-    let cur = this.plugin.settings[tabKey];
+    let cur = this.plugin.prefs[tabKey];
     if (!T.some((x) => x[0] === cur)) cur = T[0][0];
     for (const [id, icon, label] of T) {
       const b = tabs.createEl("button", { cls: "at-tab" + (cur === id ? " is-active" : ""), attr: { "aria-label": label } });
@@ -56,7 +56,7 @@ export class WritingView extends ItemView {
       b.createSpan({ text: label, cls: "at-tab-label" });
       if (id === "check" && this.plugin.check && this.plugin.check.path === st.file.path && this.plugin.check.issues.size)
         b.createSpan({ cls: "at-badge", text: String(this.plugin.check.issues.size) });
-      b.onclick = () => { this.plugin.settings[tabKey] = id; this.plugin.saveSettingsSoon(); this.render(); };
+      b.onclick = () => { this.plugin.prefs[tabKey] = id; this.plugin.saveSettingsSoon(); this.render(); };
     }
     const body = el.createDiv({ cls: "at-wp-body" });
     try {
@@ -77,7 +77,7 @@ export class WritingView extends ItemView {
 
   /* ---------- Stats ---------- */
   renderOverview(el, st) {
-    const a = st.analysis, s = this.plugin.settings;
+    const a = st.analysis, s = this.plugin.prefs;
     const hero = el.createDiv({ cls: "at-hero" });
     hero.createDiv({ cls: "at-hero-num", text: fmtN(a.words) });
     hero.createDiv({ cls: "at-hero-sub", text: "words · " + lengthCategory(a.words) });
@@ -275,7 +275,7 @@ export class WritingView extends ItemView {
     }
 
     // echoes
-    const ec = section(`Repeated words nearby`, `The same word again within ${P.settings.echoWindow} words. Tap to step through them.`);
+    const ec = section(`Repeated words nearby`, `The same word again within ${P.prefs.echoWindow} words. Tap to step through them.`);
     if (a.echoes.length) chips(ec, a.echoes.map((e) => ({ key: "echo:" + e.word, label: e.word, count: e.count + 1, ranges: wordRanges(e.idx) })));
     else ec.createDiv({ cls: "at-hint", text: "None found." });
 
@@ -326,7 +326,7 @@ export class WritingView extends ItemView {
 
   /* ---------- Check ---------- */
   renderCheck(el, st) {
-    const P = this.plugin, s = P.settings;
+    const P = this.plugin, s = P.prefs;
     const langName = st.ltLang === "auto" ? `Auto-detect (likely ${st.analysis.lang === "es" ? "Español" : "English"})` : LANGS[st.ltLang];
     el.createDiv({ cls: "at-hint", text: `Spelling & grammar in ${langName}${st.langSource === "note" ? " — set for this note" : ""}. Change it with the language menu above.` });
 

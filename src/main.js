@@ -31,7 +31,7 @@ export function clickHandlerFor(plugin) {
 
 export default class AuthorsToolbox extends Plugin {
   async onload() {
-    this.settings = Object.assign({}, DEFAULTS, await this.loadData());
+    this.prefs = Object.assign({}, DEFAULTS, await this.loadData());
     this.state = null; this.target = null; this.check = null; this.checking = false; this.checkStatus = "";
     this.sent = []; this.issueSeq = 0;
     this.saveSettingsSoon = debounce(() => this.saveSettings(), 4000, true);
@@ -39,7 +39,7 @@ export default class AuthorsToolbox extends Plugin {
     const selectionWatcher = selectionWatcherFor(this);
     const clicks = clickHandlerFor(this);
     this.registerEditorExtension([alignView, issueField, selectionWatcher, clicks, spView, spAttrs]);
-    if (this.settings.smartEnter) this.registerEditorExtension(spKeymap);
+    if (this.prefs.smartEnter) this.registerEditorExtension(spKeymap);
     this.registerEditorExtension(rayaExtension(this));
     this.registerMarkdownPostProcessor((el, ctx) => spPostProcess(el, ctx));
     this.registerEditorSuggest(new ScriptSuggest(this.app, this));
@@ -122,9 +122,10 @@ export default class AuthorsToolbox extends Plugin {
     this.app.workspace.onLayoutReady(() => {
       const v = this.app.workspace.getActiveViewOfType(MarkdownView);
       if (v) this.setTarget(v);
-      if (!this.settings.panelAutoOpened) {
-        this.settings.panelAutoOpened = true; this.saveSettings();
-        this.activatePanel(false);
+      if (!this.prefs.panelAutoOpened) {
+        this.prefs.panelAutoOpened = true;
+        void this.saveSettings();
+        void this.activatePanel(false);
       }
     });
   }
@@ -133,7 +134,7 @@ export default class AuthorsToolbox extends Plugin {
     this.app.workspace.getLeavesOfType(VIEW_WRITING).forEach((l) => l.detach());
   }
 
-  async saveSettings() { await this.saveData(this.settings); }
+  async saveSettings() { await this.saveData(this.prefs); }
 
   /* ---------- panel plumbing ---------- */
 
@@ -145,7 +146,7 @@ export default class AuthorsToolbox extends Plugin {
       if (!leaf) return;
       await leaf.setViewState({ type: VIEW_WRITING, active: reveal });
     }
-    if (reveal) ws.revealLeaf(leaf);
+    if (reveal) await ws.revealLeaf(leaf);
     this.refresh();
   }
 
@@ -165,7 +166,7 @@ export default class AuthorsToolbox extends Plugin {
     const fm = (this.app.metadataCache.getFileCache(file) || {}).frontmatter || {};
     const v = normLang(fm.lang);
     if (v) return { code: v, source: "note" };
-    const d = normLang(this.settings.defaultLang);
+    const d = normLang(this.prefs.defaultLang);
     return { code: d || "auto", source: d ? "default" : "auto" };
   }
 
@@ -188,7 +189,7 @@ export default class AuthorsToolbox extends Plugin {
     if (!file) { this.state = null; return; }
     const text = view.editor ? view.editor.getValue() : view.data || "";
     const L = this.noteLang(file);
-    const s = this.settings;
+    const s = this.prefs;
     const crutch = { en: s.crutchEn || DEFAULT_CRUTCH.en, es: s.crutchEs || DEFAULT_CRUTCH.es };
     const analysis = analyze(text, { lang: L.code, longSentence: s.longSentence, echoWindow: s.echoWindow, crutch });
     const outline = buildOutline(text);
@@ -228,14 +229,14 @@ export default class AuthorsToolbox extends Plugin {
     try { this.state.cursorLine = v.editor.getCursor().line; } catch { /* ignore */ }
     const prev = this.state.selection;
     this.state.selection = selection;
-    const tab = this.settings.panelTab;
+    const tab = this.prefs.panelTab;
     if (JSON.stringify(prev) !== JSON.stringify(selection) || tab === "outline") this.renderPanels();
   }
 
   /* ---------- daily progress ---------- */
 
   trackDaily(path, words) {
-    const d = this.settings.daily || (this.settings.daily = {});
+    const d = this.prefs.daily || (this.prefs.daily = {});
     const key = todayKey();
     for (const k of Object.keys(d)) if (k < key && Object.keys(d).length > 14) delete d[k];
     const day = d[key] || (d[key] = {});
@@ -244,7 +245,7 @@ export default class AuthorsToolbox extends Plugin {
     else if (e.l !== words) { e.l = words; this.saveSettingsSoon(); }
   }
   todayWords(path) {
-    const day = (this.settings.daily || {})[todayKey()] || {};
+    const day = (this.prefs.daily || {})[todayKey()] || {};
     let total = 0;
     for (const e of Object.values(day)) total += e.l - e.s;
     const e = day[path];
@@ -372,7 +373,7 @@ export default class AuthorsToolbox extends Plugin {
   }
 
   async waitForRateLimit(bytes) {
-    const s = this.settings;
+    const s = this.prefs;
     const official = /api\.languagetool\.org/.test(s.ltServer || "");
     if (!official || (s.ltKey && s.ltUser)) return;
     for (;;) {
@@ -392,13 +393,13 @@ export default class AuthorsToolbox extends Plugin {
     const view = this.target || this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!view || !view.editor || !view.file) { new Notice("Open a note in editing view first."); return; }
     this.target = view;
-    if (!this.settings.ltConsent) {
-      this.settings.panelTab = "check"; await this.activatePanel();
+    if (!this.prefs.ltConsent) {
+      this.prefs.panelTab = "check"; await this.activatePanel();
       new Notice("Allow the spelling & grammar service in the Writing panel first.");
       return;
     }
     if (this.checking) return;
-    const s = this.settings, ed = view.editor, cm = this.cmOf(view);
+    const s = this.prefs, ed = view.editor, cm = this.cmOf(view);
     const text = ed.getValue();
     const L = this.noteLang(view.file);
     const lang = L.code;
@@ -455,7 +456,7 @@ export default class AuthorsToolbox extends Plugin {
     if (cm) cm.dispatch({ effects: setIssues.of(found.map((m) => ({ from: m.from, to: m.to, kind: m.kind, id: m.id }))) });
     this.checkStatus = failed || (found.length ? `${found.length} suggestion${found.length === 1 ? "" : "s"} in ${rng.label}.` : "");
     if (failed) new Notice(failed);
-    this.settings.panelTab = "check";
+    this.prefs.panelTab = "check";
     if (!this.panels().length) await this.activatePanel();
     this.renderPanels();
   }
@@ -492,9 +493,9 @@ export default class AuthorsToolbox extends Plugin {
     const it = this.check && this.check.issues.get(id);
     if (!it) return;
     const w = it.text.trim();
-    const list = String(this.settings.ltDictionary || "").split(/\n/).map((x) => x.trim()).filter(Boolean);
+    const list = String(this.prefs.ltDictionary || "").split(/\n/).map((x) => x.trim()).filter(Boolean);
     if (!list.some((x) => x.toLowerCase() === w.toLowerCase())) list.push(w);
-    this.settings.ltDictionary = list.join("\n");
+    this.prefs.ltDictionary = list.join("\n");
     await this.saveSettings();
     // drop every other occurrence of the same word too
     for (const [k, v] of [...this.check.issues]) if (v.kind === "spelling" && v.text.toLowerCase() === w.toLowerCase()) this.dropIssue(k);
@@ -520,9 +521,9 @@ export default class AuthorsToolbox extends Plugin {
     m.addItem((i) => i.setTitle("Ignore").setIcon("x").onClick(() => this.ignoreIssue(it.id)));
     if (it.kind === "spelling") m.addItem((i) => i.setTitle(`Add “${it.text}” to dictionary`).setIcon("book-plus").onClick(() => this.addToDictionary(it.id)));
     if (it.rule) m.addItem((i) => i.setTitle("Turn off this rule").setIcon("ban").onClick(async () => {
-      const rules = String(this.settings.ltDisabledRules || "").split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
+      const rules = String(this.prefs.ltDisabledRules || "").split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
       if (!rules.includes(it.rule)) rules.push(it.rule);
-      this.settings.ltDisabledRules = rules.join(", "); await this.saveSettings();
+      this.prefs.ltDisabledRules = rules.join(", "); await this.saveSettings();
       for (const [k, v] of [...this.check.issues]) if (v.rule === it.rule) this.dropIssue(k);
       new Notice(`Rule turned off: ${it.ruleName || it.rule}`);
     }));
@@ -569,7 +570,7 @@ export default class AuthorsToolbox extends Plugin {
     editor.setCursor({ line: ln, ch: kind === "paren" ? out.length - 1 : out.length });
   }
 
-  scriptsFolder() { return normalizePath(this.settings.scriptsFolder || SCRIPTS_FOLDER_DEFAULT); }
+  scriptsFolder() { return normalizePath(this.prefs.scriptsFolder || SCRIPTS_FOLDER_DEFAULT); }
 
   async createScript(title, opts) {
     const folder = this.scriptsFolder();
@@ -580,7 +581,7 @@ export default class AuthorsToolbox extends Plugin {
     const d = new Date(), p = (x) => String(x).padStart(2, "0");
     const date = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
     const guide = !!this.app.metadataCache.getFirstLinkpathDest("Screenplay Format Guide", "");
-    return await this.app.vault.create(path, scriptTemplate({ title, date, author: this.settings.authorName, guide, ...(opts || {}) }));
+    return await this.app.vault.create(path, scriptTemplate({ title, date, author: this.prefs.authorName, guide, ...(opts || {}) }));
   }
 
   newScript() {
@@ -638,9 +639,9 @@ export default class AuthorsToolbox extends Plugin {
   }
 
   async saveUpload(file, sourcePath) {
-    const folder = normalizePath(this.settings.imageFolder || "");
+    const folder = normalizePath(this.prefs.imageFolder || "");
     const data = await file.arrayBuffer();
-    if (!this.settings.imageFolder) {
+    if (!this.prefs.imageFolder) {
       // follow Obsidian's own "Default location for new attachments" setting
       const path = await this.app.fileManager.getAvailablePathForAttachment(file.name, sourcePath || "");
       return await this.app.vault.createBinary(path, data);

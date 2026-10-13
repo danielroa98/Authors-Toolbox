@@ -12,7 +12,7 @@ export class ToolboxSettings extends PluginSettingTab {
   constructor(app, plugin) { super(app, plugin); this.plugin = plugin; }
   display() {
     const { containerEl } = this;
-    const P = this.plugin, S = P.settings;
+    const P = this.plugin, S = P.prefs;
     const save = async () => { await P.saveSettings(); P.refreshSoon(); };
     containerEl.empty();
 
