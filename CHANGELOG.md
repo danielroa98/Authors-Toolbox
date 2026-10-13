@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.2 — 2026-10-13
+- Stylesheet cleaned up for the directory's CSS review:
+  - No `!important`; overrides now use more specific selectors.
+  - Grammar underlines are dotted borders instead of wavy text decoration, which older mobile WebKit only partly supports.
+  - Print-only page-break rules were removed.
+
 ## 1.4.1 — 2026-10-13
 - Display name changed to **Authors Toolbox**: the community directory doesn't allow apostrophes in plugin names. The plugin ID (`authors-toolbox`), settings and features are unchanged.
 
