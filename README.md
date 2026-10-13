@@ -1,4 +1,4 @@
-# Author's Toolbox
+# Authors Toolbox
 
 **Writing tools for fiction writers and screenwriters in [Obsidian](https://obsidian.md).** It adds a writing panel with statistics, a reorderable outline, style insights and an English/Spanish spelling and grammar check. It also covers paragraph alignment, images in the text, Spanish dialogue dashes, and a complete screenplay mode based on [Fountain](https://fountain.io).
 
@@ -44,7 +44,7 @@ Headings, comments, callouts, code blocks and front matter are not counted, so t
 
 ### Spelling and grammar
 
-Obsidian has no grammar checker of its own, and its spellcheck follows the operating system. On macOS it often offers no suggestions when you write in more than one language. Author's Toolbox adds an on-demand check powered by [LanguageTool](https://languagetool.org):
+Obsidian has no grammar checker of its own, and its spellcheck follows the operating system. On macOS it often offers no suggestions when you write in more than one language. Authors Toolbox adds an on-demand check powered by [LanguageTool](https://languagetool.org):
 
 - Check the **selection**, the **current section** or the **whole note**.
 - Problems are underlined in the editor by type: spelling, grammar, punctuation and style.
@@ -64,7 +64,7 @@ Center, right-align, left-align or justify **only the selected paragraphs**: rig
 
 ### Spanish dialogue dash (raya)
 
-In Markdown, a line that starts with `-` becomes a bullet list, which breaks Spanish-style dialogue. In story notes, Author's Toolbox handles this:
+In Markdown, a line that starts with `-` becomes a bullet list, which breaks Spanish-style dialogue. In story notes, Authors Toolbox handles this:
 
 - A `-` typed at the **start of a line** becomes **—**, so `—¿Vienes? —preguntó.` stays dialogue.
 - `--` anywhere becomes **—**.
@@ -154,25 +154,25 @@ On iPhone and iPad, add the commands you use most to the mobile toolbar (**Setti
 
 ## Network use and privacy
 
-Author's Toolbox uses the network **only for the spelling and grammar check, and only when you ask for it.**
+Authors Toolbox uses the network **only for the spelling and grammar check, and only when you ask for it.**
 
 - **What is sent:** when you press **Check** (or run a *Check spelling & grammar* command), the text in the scope you chose (selection, current section or whole note) is sent to **LanguageTool**, by default `https://api.languagetool.org`.
 - **When:** never automatically. The first check asks for your permission, which you can withdraw in the settings.
 - **Why:** to get English and Spanish spelling and grammar suggestions that work the same on every device.
 - **Which server:** you can use your own [LanguageTool server](https://dev.languagetool.org/http-server) instead. LanguageTool's handling of text is described in its [privacy policy](https://languagetool.org/legal/privacy).
 
-The free LanguageTool service is limited to about 20 KB per request and 75 KB per minute. Author's Toolbox splits long notes and waits between parts when needed. **LanguageTool Premium** (a paid LanguageTool service) is optional.
+The free LanguageTool service is limited to about 20 KB per request and 75 KB per minute. Authors Toolbox splits long notes and waits between parts when needed. **LanguageTool Premium** (a paid LanguageTool service) is optional.
 
 Everything else runs entirely on your device: statistics, style insights, outline, alignment and screenplay layout. The plugin stores its settings and a small daily word count in its own `data.json` inside your vault. It includes no telemetry and no ads.
 
 ## Installation
 
-**From Obsidian:** Settings → Community plugins → Browse → search **Author's Toolbox** → Install → Enable.
+**From Obsidian:** Settings → Community plugins → Browse → search **Authors Toolbox** → Install → Enable.
 
 **Manually:**
 1. Download `main.js`, `manifest.json` and `styles.css` from the [latest release](../../releases/latest).
 2. Copy them to `<your vault>/.obsidian/plugins/authors-toolbox/`.
-3. Reload Obsidian and enable **Author's Toolbox** under Settings → Community plugins.
+3. Reload Obsidian and enable **Authors Toolbox** under Settings → Community plugins.
 
 **Beta versions:** install from this repository with the [BRAT](https://obsidian.md/plugins?id=obsidian42-brat) plugin.
 

@@ -85,7 +85,7 @@ export class InsertImageModal extends Modal {
       this.close();
     } catch (e) {
       console.error(e);
-      new Notice("Author's Toolbox: could not insert image — " + e.message);
+      new Notice("Authors Toolbox: could not insert image — " + e.message);
     }
   }
   onClose() { this.contentEl.empty(); }

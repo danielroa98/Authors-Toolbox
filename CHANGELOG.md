@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.4.1 — 2026-10-13
+- Display name changed to **Authors Toolbox**: the community directory doesn't allow apostrophes in plugin names. The plugin ID (`authors-toolbox`), settings and features are unchanged.
+
 ## 1.4.0 — 2026-10-13
 First public release.
 - Source split into ES modules and bundled with esbuild; passes Obsidian's official ESLint rules.

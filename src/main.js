@@ -1,4 +1,4 @@
-/* Author's Toolbox — tools for fiction writers and screenwriters in Obsidian (desktop, iPhone and iPad).
+/* Authors Toolbox — tools for fiction writers and screenwriters in Obsidian (desktop, iPhone and iPad).
  * See README.md for the feature list. Plain JavaScript (ES modules) bundled with esbuild; no Node/Electron APIs.
  */
 import { Plugin, Notice, MarkdownView, Menu, Platform, requestUrl, debounce, TFile, TFolder, normalizePath } from "obsidian";

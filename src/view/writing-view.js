@@ -69,7 +69,7 @@ export class WritingView extends ItemView {
       else if (cur === "check") this.renderCheck(body, st);
       else this.renderOverview(body, st);
     } catch (e) {
-      console.error("Author's Toolbox:", e);
+      console.error("Authors Toolbox:", e);
       body.createDiv({ cls: "at-empty", text: "Something went wrong rendering this tab: " + e.message });
     }
     el.scrollTop = scroll;
@@ -293,7 +293,7 @@ export class WritingView extends ItemView {
     if (a.adverbs.length) chips(adv, a.adverbs.slice(0, 20).map((x) => ({ key: "adv:" + x.word, label: x.word, count: x.idx.length, ranges: wordRanges(x.idx) })));
 
     // crutch words
-    const cr = section("Crutch words", "Edit the list in Settings → Author's Toolbox.");
+    const cr = section("Crutch words", "Edit the list in Settings → Authors Toolbox.");
     if (a.crutch.length) chips(cr, a.crutch.map((x) => ({ key: "cr:" + x.word, label: x.word, count: x.hits.length, ranges: hitRanges(x.hits) })));
     else cr.createDiv({ cls: "at-hint", text: "None found." });
 
@@ -333,7 +333,7 @@ export class WritingView extends ItemView {
     if (!s.ltConsent) {
       const box = el.createDiv({ cls: "at-consent" });
       box.createDiv({ cls: "at-label", text: "Before the first check" });
-      box.createEl("p", { text: "Obsidian has no grammar checker of its own, so Author's Toolbox uses LanguageTool. When you tap Check, the text in the chosen scope is sent to " + (s.ltServer || "languagetool.org") + " and the suggestions come back here. Nothing is sent automatically." });
+      box.createEl("p", { text: "Obsidian has no grammar checker of its own, so Authors Toolbox uses LanguageTool. When you tap Check, the text in the chosen scope is sent to " + (s.ltServer || "languagetool.org") + " and the suggestions come back here. Nothing is sent automatically." });
       box.createEl("p", { cls: "at-hint", text: "Free service limits: about 20 KB per request and 75 KB per minute — long notes are checked in parts. You can use a LanguageTool Premium key or your own server in Settings." });
       const b = box.createEl("button", { cls: "mod-cta", text: "Allow and continue" });
       b.onclick = async () => { s.ltConsent = true; await P.saveSettings(); this.render(); };
