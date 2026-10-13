@@ -1,5 +1,5 @@
-# build output (attached to GitHub releases, not committed)
-main.js
+# build output in the repo root (attached to GitHub releases, not committed)
+/main.js
 node_modules/
 # never publish your own settings: they can contain personal data or API keys
 data.json
