@@ -621,8 +621,7 @@ export default class AuthorsToolbox extends Plugin {
     const existing = this.app.vault.getAbstractFileByPath(path);
     if (existing instanceof TFile) await this.app.vault.process(existing, () => out);
     else await this.app.vault.create(path, out);
-    try { await navigator.clipboard.writeText(out); } catch { /* clipboard may be unavailable */ }
-    new Notice(`Exported to ${path} (also copied to the clipboard). Open it in Final Draft, Fade In, Highland, WriterSolo or Beat.`, 8000);
+    new Notice(`Exported to ${path}. Open it in Final Draft, Fade In, Highland, WriterSolo or Beat.`, 8000);
   }
 
   async toggleScriptMode() {

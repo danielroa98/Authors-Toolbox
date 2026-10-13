@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.4 — 2026-10-13
+- **Privacy:** the plugin no longer lists every file in your vault. **Insert image…** now opens a folder browser that starts in your attachments folder (or the image folder from settings), and you can move up and down folders from there.
+- **Privacy:** **Export as .fountain** no longer touches the clipboard. It only saves the file in `Exports/`.
+
 ## 1.4.3 — 2026-10-13
 - Requires Obsidian **1.7.2** or later. The plugin uses APIs added in 1.4.4–1.7.2, and the directory review checks that `minAppVersion` covers them.
 - Internal: the plugin's settings object is now `prefs`. Obsidian 1.13 reserves `Plugin.settings`, so the old name clashed with it. Saved settings are unaffected.

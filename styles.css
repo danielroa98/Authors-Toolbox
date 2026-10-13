@@ -180,3 +180,5 @@
 
 .at-hidden { display: none; }
 .at-full { width: 100%; }
+.at-browse-bar { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.at-browse-path { color: var(--text-muted); font-size: var(--font-ui-smaller); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

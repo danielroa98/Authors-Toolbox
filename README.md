@@ -60,7 +60,7 @@ Center, right-align, left-align or justify **only the selected paragraphs**: rig
 
 ### Images in the text
 
-**Insert image…** lets you pick an image from your vault or upload one from your device. You can set its width, alignment and an optional italic caption.
+**Insert image…** lets you browse your vault's folders for an image (it opens in your attachments folder) or upload one from your device. You can set its width, alignment and an optional italic caption.
 
 ### Spanish dialogue dash (raya)
 
@@ -93,7 +93,7 @@ Notes with `type: script` are written in **[Fountain](https://fountain.io)**, th
     - things the camera can't show ("thinks", "recuerda");
     - characters who speak before they're introduced in CAPS.
 - **New script…** and **Adapt this story into a script**. The second creates a linked script and opens it next to the story.
-- **Export as .fountain**, for Final Draft, Fade In, Highland, WriterSolo or Beat. The export also copies the script to the clipboard.
+- **Export as .fountain**, for Final Draft, Fade In, Highland, WriterSolo or Beat. The file is saved in an `Exports` folder next to the script.
 
 The spelling and grammar check skips character names, scene headings and transitions in scripts.
 
