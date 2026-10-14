@@ -108,6 +108,9 @@ export interface OpenerRun {
 export interface ParaWordCount {
   i: number;
   n: number;
+  /** Plain-text range of the paragraph inside `paras[i]` when lines count as paragraphs. */
+  a?: number;
+  b?: number;
 }
 
 export type CrutchLists = Record<Lang, string>;
@@ -118,6 +121,8 @@ export interface AnalyzeOptions {
   echoWindow?: number;
   crutch?: CrutchLists;
   longSentence?: number;
+  /** Count each line of a Markdown paragraph as its own paragraph. */
+  linesAsParagraphs?: boolean;
 }
 
 export interface Analysis {
@@ -694,7 +699,19 @@ export function analyze(text: string, opts?: AnalyzeOptions | null): Analysis {
   }
 
   // paragraphs
-  const paraWords: ParaWordCount[] = prose.map((p, i) => ({ i, n: p.words })).filter((x) => x.n > 0);
+  const paraWords: ParaWordCount[] = opts.linesAsParagraphs
+    ? prose.flatMap((p, i) => {
+      // lines of one Markdown paragraph are joined with "\n" in the plain text
+      const out: ParaWordCount[] = [];
+      let a = 0;
+      for (const line of p.plain.split("\n")) {
+        const n = words(line).length;
+        if (n > 0) out.push({ i, n, a, b: a + line.length });
+        a += line.length + 1;
+      }
+      return out;
+    })
+    : prose.map((p, i) => ({ i, n: p.words })).filter((x) => x.n > 0);
   const longestParas = [...paraWords].sort((a, b) => b.n - a.n).slice(0, 3);
 
   const r = readability(lang, nW, nS, syl);

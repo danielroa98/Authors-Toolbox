@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.7.0 — 2026-10-14
+- **Poetry mode (first part)** for notes with `type: poem`:
+  - Lines and indentation kept in the editor and Reading view, with a hanging indent for long lines.
+  - **Poem tab:** syllables per line (Spanish *métrica* with *sinalefa*, *hiato* and the *ley del acento final*; approximate in English), rhyme scheme with consonant and assonant rhyme, and form recognition (sonnet, haiku, décima, romance…).
+  - Poems keep their layout when exported.
+- **Manuscript export:**
+  - New formats: **EPUB 3** and **plain text**.
+  - **Project export:** an anthology note or a folder becomes one manuscript, one chapter per note.
+  - **Presets**, a **cover page**, a choice of **scene-break symbol**, and **keep justified paragraphs** in the standard layout.
+- **Statistics:** optional *Count each line as a paragraph*.
+- New: `docs/IMPLEMENTATION_PLAN.md` with the plan for manuscripts and poetry.
+
 ## 1.6.1 — 2026-10-14
 - **Manuscript export:** the title now sits right under your name and contact details instead of a third of the way down the first page, so the story starts on page 1 without a large empty gap.
 - A subtitle that already names you (for example *Un relato escrito por …*) replaces the "by …" line instead of repeating your name, and it's left out of anonymous contest entries.

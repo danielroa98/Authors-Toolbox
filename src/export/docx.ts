@@ -1,5 +1,5 @@
 import { zip } from "./zip";
-import { labels, roundedWords, runsText, titleLines } from "./manuscript";
+import { breakText, justifies, labels, roundedWords, titleLines } from "./manuscript";
 import type { ExportOptions, Manuscript, Run } from "./manuscript";
 
 /* ======================================================================
@@ -17,7 +17,7 @@ function run(r: Run): string {
   return `<w:r>${pr ? `<w:rPr>${pr}</w:rPr>` : ""}<w:t xml:space="preserve">${xml(r.text)}</w:t></w:r>`;
 }
 
-interface ParaProps { align?: "left" | "center" | "right" | "both"; firstLine?: number; left?: number; single?: boolean; before?: number; pageBreak?: boolean; keepNext?: boolean; tabRight?: number }
+interface ParaProps { align?: "left" | "center" | "right" | "both"; firstLine?: number; hanging?: number; left?: number; single?: boolean; before?: number; pageBreak?: boolean; keepNext?: boolean; tabRight?: number }
 
 function para(content: string, p: ParaProps = {}): string {
   const ppr = [
@@ -25,7 +25,8 @@ function para(content: string, p: ParaProps = {}): string {
     p.pageBreak ? "<w:pageBreakBefore/>" : "",
     p.tabRight ? `<w:tabs><w:tab w:val="right" w:pos="${p.tabRight}"/></w:tabs>` : "",
     p.single || p.before ? `<w:spacing${p.before ? ` w:before="${p.before}"` : ""}${p.single ? ' w:line="240" w:lineRule="auto"' : ""}/>` : "",
-    p.firstLine !== undefined || p.left ? `<w:ind${p.left ? ` w:left="${p.left}"` : ""} w:firstLine="${p.firstLine ?? 0}"/>` : "",
+    p.hanging ? `<w:ind w:left="${p.left ?? 0}" w:hanging="${p.hanging}"/>`
+      : p.firstLine !== undefined || p.left ? `<w:ind${p.left ? ` w:left="${p.left}"` : ""} w:firstLine="${p.firstLine ?? 0}"/>` : "",
     p.align && p.align !== "left" ? `<w:jc w:val="${p.align}"/>` : "",
   ].join("");
   return `<w:p>${ppr ? `<w:pPr>${ppr}</w:pPr>` : ""}${content}</w:p>`;
@@ -34,25 +35,41 @@ function para(content: string, p: ParaProps = {}): string {
 const text = (s: string) => run({ text: s });
 const PAGE_FIELD = '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>';
 
-/** The paragraphs of the story itself (shared by both layouts). */
+/** The text itself (shared by both layouts). */
 function bodyXml(ms: Manuscript, o: ExportOptions): string {
   const out: string[] = [];
-  const topLevel = Math.min(...ms.blocks.filter((b) => b.kind === "heading").map((b) => (b.kind === "heading" ? b.level : 9)), 9);
+  const levels = ms.blocks.flatMap((b) => (b.kind === "heading" && !b.chapter ? [b.level] : []));
+  const topLevel = levels.length ? Math.min(...levels) : 9;
+  const poem = ms.blocks.some((b) => b.kind === "verse");
   let first = true;
   for (const b of ms.blocks) {
-    if (b.kind === "break") { out.push(para(text("#"), { align: "center", firstLine: 0 })); continue; }
-    if (b.kind === "heading") {
-      const align = b.align === "justify" ? "center" : b.align;
-      out.push(para(b.runs.map((r) => run({ ...r, b: true })).join(""), {
-        align: align === "left" ? "left" : align, firstLine: 0, keepNext: true,
-        pageBreak: o.chapterBreaks && b.level === topLevel && !first,
-      }));
-      first = false;
-      continue;
+    switch (b.kind) {
+      case "break": out.push(para(text(breakText(o)), { align: "center", firstLine: 0, before: poem ? 180 : undefined })); break;
+      case "stanza": out.push(para("", { firstLine: 0, single: true })); break;
+      case "heading": {
+        const align = b.align === "justify" ? "center" : b.align;
+        out.push(para(b.runs.map((r) => run({ ...r, b: true })).join(""), {
+          align, firstLine: 0, keepNext: true,
+          before: b.chapter && !first ? 480 : undefined,
+          pageBreak: !first && (b.chapter || (o.chapterBreaks && b.level === topLevel)),
+        }));
+        if (b.chapter) out.push(para("", { firstLine: 0, single: true }));
+        break;
+      }
+      case "verse": {
+        // a written space of indentation ≈ half an em (120 twips at 12 pt); wrapped lines hang under the line
+        const left = b.indent * 120 + 480;
+        const align = b.align === "center" || b.align === "right" ? b.align : "left";
+        out.push(para(b.runs.map(run).join(""), { align, left, hanging: 480, single: true }));
+        break;
+      }
+      case "para": {
+        const justify = b.align === "justify" && justifies(o);
+        const align = b.align === "center" || b.align === "right" ? b.align : justify ? "both" : "left";
+        out.push(para(b.runs.map(run).join(""), b.quote ? { left: INDENT, firstLine: 0, align } : { align, firstLine: align === "center" || align === "right" ? 0 : INDENT }));
+        break;
+      }
     }
-    const justify = b.align === "justify" && o.layout === "contest";
-    const align = b.align === "center" || b.align === "right" ? b.align : justify ? "both" : "left";
-    out.push(para(b.runs.map(run).join(""), b.quote ? { left: INDENT, firstLine: 0, align } : { align, firstLine: align === "center" || align === "right" ? 0 : INDENT }));
     first = false;
   }
   out.push(para(text(labels(o.lang).end), { align: "center", firstLine: 0 }));
@@ -60,12 +77,16 @@ function bodyXml(ms: Manuscript, o: ExportOptions): string {
 }
 
 function titleBlock(ms: Manuscript, o: ExportOptions, before: number): string {
+  const L = labels(o.lang);
   const { subtitle, byline } = titleLines(ms, o);
   const out = [para(text(ms.title), { align: "center", firstLine: 0, before, keepNext: true })];
   if (subtitle) out.push(para(subtitle.map(run).join(""), { align: "center", firstLine: 0, keepNext: true }));
+  if (o.layout === "contest" && o.pseudonym.trim()) out.push(para(text(`${L.pseudonym}: ${o.pseudonym.trim()}`), { align: "center", firstLine: 0, keepNext: true }));
   if (byline) out.push(para(text(byline), { align: "center", firstLine: 0, keepNext: true }));
   return out.join("");
 }
+
+const PAGE_BREAK = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
 
 export function buildDocx(ms: Manuscript, o: ExportOptions): Uint8Array {
   const L = labels(o.lang);
@@ -76,17 +97,18 @@ export function buildDocx(ms: Manuscript, o: ExportOptions): Uint8Array {
   const contest = o.layout === "contest";
   const surname = o.author.trim().split(/\s+/).pop() || "";
 
+  const count = `${L.about} ${roundedWords(ms.words).toLocaleString(o.lang === "es" ? "es-MX" : "en-US")} ${L.words}`;
   let front = "";
-  if (contest) {
-    front = titleBlock(ms, o, 0)
-      + (o.pseudonym.trim() ? para(text(`${L.pseudonym}: ${o.pseudonym.trim()}`), { align: "center", firstLine: 0 }) : "")
-      + para("", { firstLine: 0 });
-  } else {
-    const count = `${L.about} ${roundedWords(ms.words).toLocaleString(o.lang === "es" ? "es-MX" : "en-US")} ${L.words}`;
+  if (!contest) {
     front = para(text(o.author.trim()) + "<w:r><w:tab/></w:r>" + text(count), { single: true, firstLine: 0, tabRight: textWidth });
     for (const line of o.contact.split("\n").map((x) => x.trim()).filter(Boolean)) front += para(text(line), { single: true, firstLine: 0 });
+  }
+  if (o.coverPage) {
+    // title block in the middle of its own page; the text starts on page 2
+    front += titleBlock(ms, o, Math.round(page.h / 2 - 2 * MARGIN - 2 * lineTwips)) + (contest ? para(text(count), { align: "center", firstLine: 0 }) : "") + PAGE_BREAK;
+  } else {
     // title one blank line below the name block (not halfway down the page)
-    front += titleBlock(ms, o, lineTwips) + para("", { firstLine: 0 });
+    front += titleBlock(ms, o, contest ? 0 : lineTwips) + para("", { firstLine: 0 });
   }
 
   const headerRef = contest
@@ -158,9 +180,4 @@ ${contest
     contest ? ["word/footer1.xml", footer] : ["word/header1.xml", header],
   ];
   return zip(files.map(([name, s]) => ({ name, data: enc.encode(s) })));
-}
-
-/** Plain text of a manuscript (used in tests and for a quick preview). */
-export function manuscriptText(ms: Manuscript): string {
-  return ms.blocks.map((b) => (b.kind === "break" ? "#" : runsText(b.runs))).join("\n");
 }

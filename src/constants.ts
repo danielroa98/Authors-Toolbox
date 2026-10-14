@@ -22,6 +22,19 @@ export interface DailyEntry { s: number; l: number }
 /** daily[YYYY-MM-DD][notePath] */
 export type DailyLog = Record<string, Record<string, DailyEntry>>;
 
+/** A saved set of export options. Never holds names or contact details. */
+export interface ExportPreset {
+  layout: "manuscript" | "contest";
+  font: "times" | "courier" | "arial";
+  spacing: string;
+  page: "letter" | "a4";
+  formats: string;
+  keepJustify: boolean;
+  sceneBreak: "#" | "* * *" | "—" | "blank";
+  coverPage: boolean;
+  chapterBreaks: boolean;
+}
+
 export interface ToolboxPrefs {
   imageFolder: string;
   defaultWidth: number;
@@ -57,7 +70,14 @@ export interface ToolboxPrefs {
   storyFolders: string;
   // manuscript export
   exportLayout: "manuscript" | "contest";
-  exportFormat: "both" | "docx" | "pdf";
+  /** Comma-separated: docx, pdf, epub, txt */
+  exportFormats: string;
+  exportKeepJustify: boolean;
+  exportSceneBreak: "#" | "* * *" | "—" | "blank";
+  exportCoverPage: boolean;
+  exportPresets: Record<string, ExportPreset>;
+  /** Count every line as a paragraph in the statistics. */
+  linesAsParagraphs: boolean;
   exportFont: "times" | "courier" | "arial";
   exportSpacing: string;
   exportPage: "letter" | "a4";
@@ -80,6 +100,7 @@ export const DEFAULTS: ToolboxPrefs = {
   // stories
   autoRaya: true, storyFolders: "",
   // manuscript export
-  exportLayout: "manuscript", exportFormat: "both", exportFont: "times", exportSpacing: "2", exportPage: "letter",
+  exportLayout: "manuscript", exportFormats: "docx,pdf", exportKeepJustify: false, exportSceneBreak: "#", exportCoverPage: false,
+  exportPresets: {}, linesAsParagraphs: false, exportFont: "times", exportSpacing: "2", exportPage: "letter",
   exportContact: "", exportPseudonym: "", exportChapterBreaks: false,
 };

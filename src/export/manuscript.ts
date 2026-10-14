@@ -11,8 +11,13 @@ export type Align = "left" | "center" | "right" | "justify";
 
 export type Block =
   | { kind: "para"; runs: Run[]; align: Align; quote?: boolean }
-  | { kind: "heading"; level: number; runs: Run[]; align: Align }
-  | { kind: "break" };
+  /** `chapter`: a note's title inside a compiled project (always starts a new page). */
+  | { kind: "heading"; level: number; runs: Run[]; align: Align; chapter?: boolean }
+  | { kind: "break" }
+  /** A line of verse; `indent` = leading spaces as written. */
+  | { kind: "verse"; runs: Run[]; align: Align; indent: number }
+  /** The gap between two stanzas. */
+  | { kind: "stanza" };
 
 export interface Manuscript {
   title: string;
@@ -39,8 +44,22 @@ export interface ExportOptions {
   pseudonym: string;
   /** Each top-level heading starts a new page. */
   chapterBreaks: boolean;
+  /** Keep `%%justify%%` paragraphs justified in the standard layout too. */
+  keepJustify: boolean;
+  /** Scene-break symbol, or "blank" for an empty line. */
+  sceneBreak: SceneBreak;
+  /** Title page on its own; the text starts on page 2. */
+  coverPage: boolean;
   lang: "es" | "en";
 }
+
+export type SceneBreak = "#" | "* * *" | "—" | "blank";
+
+/** Text printed for a scene break ("" for a blank line). */
+export const breakText = (o: ExportOptions): string => (o.sceneBreak === "blank" ? "" : o.sceneBreak);
+
+/** Whether a paragraph marked `%%justify%%` is printed justified. */
+export const justifies = (o: ExportOptions): boolean => o.layout === "contest" || o.keepJustify;
 
 /** Labels in the story's language. */
 export function labels(lang: "es" | "en") {
@@ -145,7 +164,7 @@ const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").tri
  * images, tables and code are left out. The first H1 is the title; a heading right under it
  * is the subtitle, unless it's just the author's name (a byline), which is dropped.
  */
-export function buildManuscript(text: string, opts: { fallbackTitle: string; fmTitle?: string; authorNames: string[] }): Manuscript {
+export function buildManuscript(text: string, opts: { fallbackTitle: string; fmTitle?: string; authorNames: string[]; poem?: boolean }): Manuscript {
   const lines = text.split("\n");
   const blocks: Block[] = [];
   let title = opts.fmTitle?.trim() || "";
@@ -162,7 +181,12 @@ export function buildManuscript(text: string, opts: { fallbackTitle: string; fmT
     if (opens % 2 === 1) { comment = true; L = L.slice(0, L.lastIndexOf("%%")); if (!L.trim()) continue; }
     if (/^\s*(```|~~~)/.test(L)) { fence = !fence; continue; }
     if (fence) continue;
-    if (!L.trim()) { callout = false; blockAlign = "left"; continue; }
+    if (!L.trim()) {
+      callout = false; blockAlign = "left";
+      // in a poem a blank line separates stanzas
+      if (opts.poem && blocks.length && blocks[blocks.length - 1].kind === "verse") blocks.push({ kind: "stanza" });
+      continue;
+    }
     if (/^\s*>\s*\[!/.test(L)) { callout = true; continue; }
     if (callout && /^\s*>/.test(L)) continue;
     callout = false;
@@ -175,7 +199,10 @@ export function buildManuscript(text: string, opts: { fallbackTitle: string; fmT
     if (mk) { align = mk[2] as Align; blockAlign = align; L = mk[1] + L.slice(mk[0].length); }
 
     if (HR_RE.test(L) || SCENE_RE.test(L)) {
-      if (sawProse && blocks.length && blocks[blocks.length - 1].kind !== "break") blocks.push({ kind: "break" });
+      if (sawProse && blocks.length && blocks[blocks.length - 1].kind !== "break") {
+        if (blocks[blocks.length - 1].kind === "stanza") blocks.pop();
+        blocks.push({ kind: "break" });
+      }
       subtitleSlot = false;
       continue;
     }
@@ -197,10 +224,21 @@ export function buildManuscript(text: string, opts: { fallbackTitle: string; fmT
         continue;
       }
       subtitleSlot = false;
+      if (blocks.length && blocks[blocks.length - 1].kind === "stanza") blocks.pop();
       blocks.push({ kind: "heading", level, runs, align: mk ? align : "center" });
       continue;
     }
     subtitleSlot = false;
+    if (opts.poem) {
+      // verse: keep the line as written, including its indentation (a tab counts as 4 spaces)
+      const lead = /^[ \t]*/.exec(L)?.[0] ?? "";
+      const indent = lead.replace(/\t/g, "    ").length;
+      const runs = parseInline(cleanInline(L.slice(lead.length)).trimEnd());
+      if (!runsText(runs).trim()) continue;
+      blocks.push({ kind: "verse", runs, align: align === "justify" ? "left" : align, indent });
+      sawProse = true;
+      continue;
+    }
     let quote = false;
     const q = /^\s*>+\s?/.exec(L);
     if (q) { quote = true; L = L.slice(q[0].length); }
@@ -212,9 +250,30 @@ export function buildManuscript(text: string, opts: { fallbackTitle: string; fmT
     blocks.push({ kind: "para", runs, align, ...(quote ? { quote } : {}) });
     sawProse = true;
   }
-  while (blocks.length && blocks[blocks.length - 1].kind === "break") blocks.pop();
+  while (blocks.length && (blocks[blocks.length - 1].kind === "break" || blocks[blocks.length - 1].kind === "stanza")) blocks.pop();
   if (!title) title = opts.fallbackTitle;
+  return { title, subtitle, blocks, words: countWords(blocks) };
+}
+
+export function countWords(blocks: Block[]): number {
   let count = 0;
-  for (const b of blocks) if (b.kind !== "break") count += words(runsText(b.runs)).length;
-  return { title, subtitle, blocks, words: count };
+  for (const b of blocks) if (b.kind !== "break" && b.kind !== "stanza") count += words(runsText(b.runs)).length;
+  return count;
+}
+
+/** One note of a project, already read. */
+export interface ProjectEntry { text: string; title: string; fmTitle?: string; poem: boolean }
+
+/**
+ * Compile several notes (an anthology or a folder of chapters) into one manuscript.
+ * Each note becomes a chapter: its title is the chapter heading, its subtitle/byline is dropped,
+ * and its own headings stay as section titles inside the chapter.
+ */
+export function compileProject(title: string, entries: ProjectEntry[], authorNames: string[]): Manuscript {
+  const blocks: Block[] = [];
+  for (const e of entries) {
+    const ms = buildManuscript(e.text, { fallbackTitle: e.title, fmTitle: e.fmTitle, authorNames, poem: e.poem });
+    blocks.push({ kind: "heading", level: 0, runs: [{ text: ms.title }], align: "center", chapter: true }, ...ms.blocks);
+  }
+  return { title, subtitle: null, blocks, words: countWords(blocks) };
 }

@@ -1,4 +1,6 @@
 import { ItemView, MarkdownView, Menu, Platform, setIcon, WorkspaceLeaf } from "obsidian";
+import type { PoemAnalysis } from "../poetry/metrics";
+import { renderPoem } from "../poetry/panel";
 import { CheckScope, ToolboxPrefs, VIEW_WRITING } from "../constants";
 import { DocRange, issueRange } from "../editor/issues";
 import { scriptTabMethods, ScriptPanelState } from "../screenplay/panel";
@@ -10,6 +12,8 @@ import type { EditorView } from "@codemirror/view";
 /** Panel state for any note; `script` and `sOutline` are null for prose. */
 export interface PluginState extends Omit<ScriptPanelState, "script" | "sOutline"> {
   script: ScriptPanelState["script"] | null;
+  /** Poem analysis for notes marked as poems. */
+  poem: PoemAnalysis | null;
   sOutline: ScriptPanelState["sOutline"] | null;
   file: { basename: string; path: string };
   text: string;
@@ -124,7 +128,9 @@ export class WritingView extends ItemView {
     const isSp = !!st.script;
     const T: [string, string, string][] = isSp
       ? [["sp-stats", "clapperboard", "Script"], ["sp-scenes", "list-video", "Scenes"], ["sp-cast", "users", "Cast"], ["sp-notes", "lightbulb", "Notes"], ["check", "spell-check", "Check"]]
-      : [["overview", "bar-chart-2", "Stats"], ["outline", "list-tree", "Outline"], ["style", "sparkles", "Style"], ["check", "spell-check", "Check"]];
+      : st.poem
+        ? [["poem", "feather", "Poem"], ["overview", "bar-chart-2", "Stats"], ["style", "sparkles", "Style"], ["check", "spell-check", "Check"]]
+        : [["overview", "bar-chart-2", "Stats"], ["outline", "list-tree", "Outline"], ["style", "sparkles", "Style"], ["check", "spell-check", "Check"]];
     const tabKey = isSp ? "panelTabScript" : "panelTab";
     let cur = String(this.plugin.prefs[tabKey] || "");
     if (!T.some((x) => x[0] === cur)) cur = T[0][0];
@@ -143,6 +149,7 @@ export class WritingView extends ItemView {
       else if (spSt && cur === "sp-scenes") this.renderScenes(body, spSt);
       else if (spSt && cur === "sp-cast") this.renderCast(body, spSt);
       else if (spSt && cur === "sp-notes") this.renderNotes(body, spSt);
+      else if (st.poem && cur === "poem") renderPoem(body, st.poem, this.plugin);
       else if (cur === "outline") this.renderOutline(body, st);
       else if (cur === "style") this.renderStyle(body, st);
       else if (cur === "check") this.renderCheck(body, st);
@@ -414,8 +421,9 @@ export class WritingView extends ItemView {
     for (const p of a.longestParas) {
       const it = lp.createDiv({ cls: "at-item" });
       it.createSpan({ cls: "at-item-n", text: p.n + "w" });
-      it.createSpan({ text: a.paras[p.i].plain.slice(0, 70).trim() + "…" });
-      it.onclick = (): void => { const pp = a.paras[p.i]; P.showRanges([P.plainDocRange(pp, 0, pp.plain.length)], 0); };
+      const pp = a.paras[p.i], from = p.a ?? 0, to = p.b ?? pp.plain.length;
+      it.createSpan({ text: pp.plain.slice(from, Math.min(to, from + 70)).trim() + "…" });
+      it.onclick = (): void => { P.showRanges([P.plainDocRange(pp, from, to)], 0); };
     }
   }
 

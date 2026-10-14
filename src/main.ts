@@ -9,6 +9,17 @@ import { alignView, applyAlign } from "./editor/alignment";
 import { DocRange, issueAt, issueField, issueRange, removeIssue, setFind, setIssues } from "./editor/issues";
 import { convertDialogueDashes, rayaExtension } from "./editor/raya";
 import { ExportManuscriptModal } from "./modals/export-manuscript";
+import { buildManuscript, compileProject } from "./export/manuscript";
+import type { ProjectEntry } from "./export/manuscript";
+import { isPoemFM, isPoemText } from "./poetry/poem";
+import { poemAttrs, poemPostProcess } from "./poetry/editor";
+import { analyzePoem } from "./poetry/metrics";
+
+/** A front-matter value as text ("a, b" for lists). */
+function fmText(v: unknown): string {
+  if (Array.isArray(v)) return (v as unknown[]).map(fmText).join(", ");
+  return typeof v === "string" ? v : typeof v === "number" || typeof v === "boolean" ? String(v) : "";
+}
 import { InsertImageModal } from "./modals/insert-image";
 import { NumberPrompt, TextPrompt } from "./modals/prompts";
 import { SCRIPTS_FOLDER_DEFAULT, ScriptSuggest, scriptTemplate, spAttrs, spKeymap, spPostProcess, spView } from "./screenplay/editor";
@@ -63,10 +74,11 @@ export default class AuthorsToolbox extends Plugin {
 
     const selectionWatcher = selectionWatcherFor(this);
     const clicks = clickHandlerFor(this);
-    this.registerEditorExtension([alignView, issueField, selectionWatcher, clicks, spView, spAttrs]);
+    this.registerEditorExtension([alignView, issueField, selectionWatcher, clicks, spView, spAttrs, poemAttrs]);
     if (this.prefs.smartEnter) this.registerEditorExtension(spKeymap);
     this.registerEditorExtension(rayaExtension(this));
     this.registerMarkdownPostProcessor((el, ctx) => spPostProcess(el, ctx));
+    this.registerMarkdownPostProcessor((el, ctx) => poemPostProcess(el, ctx));
     this.registerEditorSuggest(new ScriptSuggest(this.app, this));
 
     // Reading view: tag each rendered paragraph whose source starts with an alignment marker
@@ -112,6 +124,10 @@ export default class AuthorsToolbox extends Plugin {
     this.addCommand({ id: "lang-auto", name: "Set note language: auto-detect", callback: () => { void this.setNoteLang("auto"); } });
 
     this.registerEvent(this.app.workspace.on("file-menu", (menu, file) => {
+      if (file instanceof TFolder) {
+        menu.addItem((i) => i.setTitle("Export folder as one manuscript…").setIcon("book-down").setSection("action").onClick(() => { void this.exportProject(file); }));
+        return;
+      }
       if (!(file instanceof TFile) || file.extension !== "md") return;
       menu.addItem((i) => i.setTitle("Export manuscript…").setIcon("file-down").setSection("action").onClick(() => { void this.exportManuscript(file); }));
     }));
@@ -230,7 +246,7 @@ export default class AuthorsToolbox extends Plugin {
     const L = this.noteLang(file);
     const s = this.prefs;
     const crutch = { en: s.crutchEn || DEFAULT_CRUTCH.en, es: s.crutchEs || DEFAULT_CRUTCH.es };
-    const analysis = analyze(text, { lang: L.code, longSentence: s.longSentence, echoWindow: s.echoWindow, crutch });
+    const analysis = analyze(text, { lang: L.code, longSentence: s.longSentence, echoWindow: s.echoWindow, crutch, linesAsParagraphs: s.linesAsParagraphs });
     const outline = buildOutline(text);
     const fm = (this.app.metadataCache.getFileCache(file)?.frontmatter || {}) as Record<string, unknown>;
     const rawGoal = fm.word_goal;
@@ -241,6 +257,7 @@ export default class AuthorsToolbox extends Plugin {
     const isSp = isScriptFM(fm) || isScriptText(text);
     const script = isSp ? analyzeScript(text, analysis.lang) : null;
     const sOutline = isSp ? buildScriptOutline(text) : null;
+    const poem = !isSp && (isPoemFM(fm) || isPoemText(text)) ? analyzePoem(text, analysis.lang) : null;
     this.state = {
       file: { basename: file.basename, path: file.path },
       text,
@@ -250,6 +267,7 @@ export default class AuthorsToolbox extends Plugin {
       cursorLine,
       script,
       sOutline,
+      poem,
       fm,
       langCode: L.code,
       langSource: L.source,
@@ -689,17 +707,101 @@ export default class AuthorsToolbox extends Plugin {
     }, "The script opens to the right of the story so you can adapt it scene by scene.").open();
   }
 
-  /** Open the manuscript export window for a story note (the active one by default). */
+  /** Open the manuscript export window for a story or poem note (the active one by default). Anthology notes export as a project. */
   async exportManuscript(file?: TFile): Promise<void> {
     const v = this.target || this.app.workspace.getActiveViewOfType(MarkdownView);
     const f = file ?? v?.file ?? null;
     if (!f || f.extension !== "md") { new Notice("Open the story you want to export first."); return; }
+    const fm = (this.app.metadataCache.getFileCache(f)?.frontmatter ?? {}) as Record<string, unknown>;
+    if (fmText(fm.type).toLowerCase().replace(/\[\[|\]\]/g, "") === "anthology") { await this.exportProject(f); return; }
     const text = v && v.file === f && v.editor ? v.editor.getValue() : await this.app.vault.read(f);
     if (isScriptText(text)) { new Notice("This note is a script. Use the screenplay export command for it instead."); return; }
-    const fm = (this.app.metadataCache.getFileCache(f)?.frontmatter ?? {}) as Record<string, unknown>;
+    const ms = buildManuscript(text, { fallbackTitle: f.basename, fmTitle: typeof fm.title === "string" ? fm.title : undefined, authorNames: [this.prefs.authorName], poem: isPoemFM(fm) || isPoemText(text) });
+    new ExportManuscriptModal(this.app, this, {
+      ms, folder: f.parent?.path ?? "", baseName: f.basename, lang: this.langOf(f, text),
+      pseudonym: typeof fm.pseudonym === "string" ? fm.pseudonym : undefined,
+    }).open();
+  }
+
+  /** Language of a note for labels ("FIN" / "END"). */
+  langOf(f: TFile, text: string): "es" | "en" {
     const code = this.noteLang(f).code;
-    const lang = baseLang(code === "auto" ? detectLang(text) : code);
-    new ExportManuscriptModal(this.app, this, f, text, lang, fm).open();
+    return baseLang(code === "auto" ? detectLang(text) : code);
+  }
+
+  /**
+   * Export several notes as one manuscript: an anthology note (the stories whose `anthology`
+   * property links to it, plus any it links to in its text) or a folder of chapter notes.
+   */
+  async exportProject(source: TFile | TFolder): Promise<void> {
+    const files = source instanceof TFolder ? this.folderNotes(source) : this.anthologyNotes(source);
+    if (!files.length) {
+      new Notice(source instanceof TFolder ? "No notes to export in this folder." : "No stories found for this anthology. Link it from a story's “anthology” property.");
+      return;
+    }
+    const entries: ProjectEntry[] = [];
+    let sample = "";
+    for (const f of files) {
+      const text = await this.app.vault.cachedRead(f);
+      if (isScriptText(text)) continue;
+      const fm = (this.app.metadataCache.getFileCache(f)?.frontmatter ?? {}) as Record<string, unknown>;
+      entries.push({ text, title: f.basename, fmTitle: typeof fm.title === "string" ? fm.title : undefined, poem: isPoemFM(fm) || isPoemText(text) });
+      if (sample.length < 20000) sample += text.slice(0, 20000 - sample.length);
+    }
+    const fm = source instanceof TFile ? (this.app.metadataCache.getFileCache(source)?.frontmatter ?? {}) as Record<string, unknown> : {};
+    const title = typeof fm.title === "string" && fm.title.trim() ? fm.title.trim() : source instanceof TFile ? source.basename : source.name;
+    const ms = compileProject(title, entries, [this.prefs.authorName]);
+    const lang = source instanceof TFile ? this.langOf(source, sample) : baseLang(detectLang(sample));
+    const kind = lang === "es" ? (entries.length === 1 ? "texto" : "textos") : (entries.length === 1 ? "note" : "notes");
+    new ExportManuscriptModal(this.app, this, {
+      ms, folder: source instanceof TFile ? source.parent?.path ?? "" : source.path, baseName: title, lang,
+      pseudonym: typeof fm.pseudonym === "string" ? fm.pseudonym : undefined, note: `${entries.length} ${kind}`,
+    }).open();
+  }
+
+  /** Sort notes by their `order` property, then `date_created`, then name. */
+  private sortNotes(files: TFile[]): TFile[] {
+    const key = (f: TFile) => {
+      const fm = (this.app.metadataCache.getFileCache(f)?.frontmatter ?? {}) as Record<string, unknown>;
+      const order = typeof fm.order === "number" ? fm.order : parseFloat(fmText(fm.order));
+      return { order: Number.isFinite(order) ? order : Infinity, date: fmText(fm.date_created), name: f.basename };
+    };
+    return files.map((f) => ({ f, k: key(f) })).sort((a, b) =>
+      (a.k.order === b.k.order ? 0 : a.k.order - b.k.order) || a.k.date.localeCompare(b.k.date) || a.k.name.localeCompare(b.k.name, undefined, { numeric: true }))
+      .map((x) => x.f);
+  }
+
+  /** Markdown notes of a folder and its subfolders (subfolders after the notes, alphabetically). */
+  private folderNotes(folder: TFolder): TFile[] {
+    const notes = folder.children.filter((c): c is TFile => c instanceof TFile && c.extension === "md");
+    const subs = folder.children.filter((c): c is TFolder => c instanceof TFolder && c.name !== "Exports").sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    return [...this.sortNotes(notes), ...subs.flatMap((s) => this.folderNotes(s))];
+  }
+
+  /** Stories of an anthology: linked from the anthology's text (in that order), then those whose `anthology` property points to it. */
+  private anthologyNotes(anth: TFile): TFile[] {
+    const mc = this.app.metadataCache;
+    const out: TFile[] = [];
+    const isStory = (f: TFile) => f !== anth && f.extension === "md";
+    for (const l of mc.getFileCache(anth)?.links ?? []) {
+      const f = mc.getFirstLinkpathDest(l.link.split("#")[0], anth.path);
+      if (f && isStory(f) && !out.includes(f)) out.push(f);
+    }
+    const members: TFile[] = [];
+    // notes that link here (resolved links include front matter links); keep those whose anthology property names this note
+    for (const [src, dests] of Object.entries(mc.resolvedLinks)) {
+      if (!dests[anth.path]) continue;
+      const f = this.app.vault.getAbstractFileByPath(src);
+      if (!(f instanceof TFile) || !isStory(f) || out.includes(f)) continue;
+      const fm = (mc.getFileCache(f)?.frontmatter ?? {}) as Record<string, unknown>;
+      const raw: unknown[] = Array.isArray(fm.anthology) ? fm.anthology as unknown[] : [fm.anthology];
+      const hit = raw.some((x) => {
+        const link = fmText(x).replace(/^\[\[|\]\]$/g, "").split("|")[0].split("#")[0].trim();
+        return !!link && mc.getFirstLinkpathDest(link, f.path) === anth;
+      });
+      if (hit) members.push(f);
+    }
+    return [...out, ...this.sortNotes(members)];
   }
 
   async exportFountain(): Promise<void> {

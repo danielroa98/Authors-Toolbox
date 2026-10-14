@@ -1,5 +1,5 @@
 import { WIDTHS } from "./widths";
-import { labels, roundedWords, titleLines } from "./manuscript";
+import { breakText, justifies, labels, roundedWords, titleLines } from "./manuscript";
 import type { ExportOptions, Manuscript, Run } from "./manuscript";
 
 /* ======================================================================
@@ -92,7 +92,7 @@ export function layoutManuscript(ms: Manuscript, o: ExportOptions): PageLayout {
   const spaceW = (f: FontKey) => textWidth(" ", fonts[f], SIZE);
 
   /** Lay out one paragraph. Returns nothing; advances y. */
-  const paragraph = (runs: Run[], opt: { align: "left" | "center" | "right" | "justify"; indent?: number; left?: number; height?: number; keepWithNext?: boolean }) => {
+  const paragraph = (runs: Run[], opt: { align: "left" | "center" | "right" | "justify"; indent?: number; hang?: number; left?: number; height?: number; keepWithNext?: boolean }) => {
     const h = opt.height ?? lineH;
     const left = MARGIN + (opt.left ?? 0);
     const width = textW - (opt.left ?? 0);
@@ -101,7 +101,7 @@ export function layoutManuscript(ms: Manuscript, o: ExportOptions): PageLayout {
     const lines: Word[][] = [];
     let cur: Word[] = [], curW = 0, first = true;
     for (const w of ws) {
-      const avail = width - (first ? opt.indent ?? 0 : 0);
+      const avail = width - (first ? opt.indent ?? 0 : opt.hang ?? 0);
       const add = (cur.length ? spaceW(cur[cur.length - 1].pieces[cur[cur.length - 1].pieces.length - 1].font) : 0) + w.width;
       if (cur.length && curW + add > avail) { lines.push(cur); cur = []; curW = 0; first = false; }
       curW += cur.length ? add : w.width;
@@ -112,7 +112,7 @@ export function layoutManuscript(ms: Manuscript, o: ExportOptions): PageLayout {
     if (opt.keepWithNext && y + h * (lines.length + 1) > bottom && page().lines.length) newPage();
     lines.forEach((lw, k) => {
       if (y + h > bottom + 0.01 && page().lines.length) newPage();
-      const indent = k === 0 ? opt.indent ?? 0 : 0;
+      const indent = k === 0 ? opt.indent ?? 0 : opt.hang ?? 0;
       const avail = width - indent;
       const natural = lw.reduce((t, w, j) => t + w.width + (j < lw.length - 1 ? spaceW(w.pieces[w.pieces.length - 1].font) : 0), 0);
       const gaps = lw.length - 1;
@@ -144,14 +144,15 @@ export function layoutManuscript(ms: Manuscript, o: ExportOptions): PageLayout {
   const plain = (s: string): Run[] => [{ text: s }];
 
   // ---- first page ----
-  if (contest) {
-    const t = titleLines(ms, o);
+  const t = titleLines(ms, o);
+  const count = `${L.about} ${roundedWords(ms.words).toLocaleString(o.lang === "es" ? "es-MX" : "en-US")} ${L.words}`;
+  const titleBlock = () => {
     paragraph(plain(ms.title), { align: "center", keepWithNext: true });
     if (t.subtitle) paragraph(t.subtitle, { align: "center" });
-    if (o.pseudonym.trim()) paragraph(plain(`${L.pseudonym}: ${o.pseudonym.trim()}`), { align: "center" });
-    y += lineH;
-  } else {
-    const count = `${L.about} ${roundedWords(ms.words).toLocaleString(o.lang === "es" ? "es-MX" : "en-US")} ${L.words}`;
+    if (contest && o.pseudonym.trim()) paragraph(plain(`${L.pseudonym}: ${o.pseudonym.trim()}`), { align: "center" });
+    if (t.byline) paragraph(plain(t.byline), { align: "center" });
+  };
+  if (!contest) {
     const cw = textWidth(count, fonts.r, SIZE);
     page().lines.push({ y, wordSpace: 0, segments: [
       ...(o.author.trim() ? [{ text: o.author.trim(), font: "r" as FontKey, x: MARGIN, width: textWidth(o.author.trim(), fonts.r, SIZE) }] : []),
@@ -159,31 +160,62 @@ export function layoutManuscript(ms: Manuscript, o: ExportOptions): PageLayout {
     ] });
     y += singleH;
     for (const line of o.contact.split("\n").map((x) => x.trim()).filter(Boolean)) paragraph(plain(line), { align: "left", height: singleH });
+  }
+  if (o.coverPage) {
+    // title block in the middle of its own page; the text starts on page 2
+    y = Math.max(y + lineH, H / 2 - 2 * lineH);
+    titleBlock();
+    if (contest) paragraph(plain(count), { align: "center" });
+    newPage();
+  } else {
     // title one blank line below the name block (not halfway down the page)
-    y += lineH;
-    const t = titleLines(ms, o);
-    paragraph(plain(ms.title), { align: "center", keepWithNext: true });
-    if (t.subtitle) paragraph(t.subtitle, { align: "center" });
-    if (t.byline) paragraph(plain(t.byline), { align: "center" });
+    if (!contest) y += lineH;
+    titleBlock();
     y += lineH;
   }
 
-  // ---- story ----
-  const levels = ms.blocks.flatMap((b) => (b.kind === "heading" ? [b.level] : []));
+  // ---- text ----
+  const levels = ms.blocks.flatMap((b) => (b.kind === "heading" && !b.chapter ? [b.level] : []));
   const topLevel = levels.length ? Math.min(...levels) : 9;
+  const indentW = textWidth("n", fonts.r, SIZE);   // one written space of verse indentation ≈ half an em
   let started = false;
   for (const b of ms.blocks) {
-    if (b.kind === "break") { paragraph(plain("#"), { align: "center" }); continue; }
-    if (b.kind === "heading") {
-      if (o.chapterBreaks && b.level === topLevel && started && page().lines.length) newPage();
-      paragraph(b.runs.map((r) => ({ ...r, b: true })), { align: b.align === "justify" ? "center" : b.align, keepWithNext: true });
-      started = true;
-      continue;
+    switch (b.kind) {
+      case "break": {
+        const sym = breakText(o);
+        const verse = ms.blocks.some((x) => x.kind === "verse");
+        if (verse) y += singleH / 2;   // poems are single-spaced: give the break some air
+        if (sym) paragraph(plain(sym), { align: "center" }); else y += lineH;
+        if (verse) y += singleH / 2;
+        break;
+      }
+      case "stanza":
+        y += singleH;
+        break;
+      case "heading": {
+        const breakBefore = b.chapter || (o.chapterBreaks && b.level === topLevel);
+        if (breakBefore && started && page().lines.length) newPage();
+        if (b.chapter && started) y += lineH;   // chapters start a little lower on the page
+        paragraph(b.runs.map((r) => ({ ...r, b: true })), { align: b.align === "justify" ? "center" : b.align, keepWithNext: true });
+        if (b.chapter) y += lineH / 2;
+        started = true;
+        break;
+      }
+      case "verse": {
+        // poems: single-spaced lines, indentation kept, wrapped lines hang under the first
+        const indent = b.indent * indentW;
+        paragraph(b.runs, { align: b.align === "justify" ? "left" : b.align, indent, hang: indent + 2 * SIZE, height: singleH });
+        started = true;
+        break;
+      }
+      case "para": {
+        const align = b.align === "justify" ? (justifies(o) ? "justify" : "left") : b.align;
+        if (b.quote) paragraph(b.runs, { align, left: INDENT });
+        else paragraph(b.runs, { align, indent: align === "center" || align === "right" ? 0 : INDENT });
+        started = true;
+        break;
+      }
     }
-    const align = b.align === "justify" ? (contest ? "justify" : "left") : b.align;
-    if (b.quote) paragraph(b.runs, { align, left: INDENT });
-    else paragraph(b.runs, { align, indent: align === "center" || align === "right" ? 0 : INDENT });
-    started = true;
   }
   paragraph(plain(L.end), { align: "center" });
 

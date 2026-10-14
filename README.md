@@ -15,7 +15,8 @@ It works on **macOS, Windows, Linux, iPhone and iPad** and requires Obsidian 1.7
   - [Images in the text](#images-in-the-text)
   - [Spanish dialogue dash (raya)](#spanish-dialogue-dash-raya)
   - [Screenplay mode](#screenplay-mode)
-  - [Manuscript export (Word and PDF)](#manuscript-export-word-and-pdf)
+  - [Manuscript export (Word, PDF, EPUB, text)](#manuscript-export-word-pdf-epub-text)
+  - [Poetry mode](#poetry-mode)
 - [Commands](#commands)
 - [Note properties](#note-properties)
 - [Settings](#settings)
@@ -98,15 +99,33 @@ Notes with `type: script` are written in **[Fountain](https://fountain.io)**, th
 
 The spelling and grammar check skips character names, scene headings and transitions in scripts.
 
-### Manuscript export (Word and PDF)
+### Manuscript export (Word, PDF, EPUB, text)
 
-Turn a story note into a submission-ready **Word (.docx)** and/or **PDF** file: run *Export manuscript as a document or PDF…*, or choose **Export manuscript…** in the note's ⋯ menu or the file explorer. The export window shows a **live preview of every page** while you change the options, and the PDF is printed from exactly that layout.
+Turn a story, a poem or a whole project into submission-ready files: run *Export manuscript as a document or PDF…*, or choose **Export manuscript…** in the note's ⋯ menu or the file explorer. The export window shows a **live preview of every page** while you change the options, and the PDF is printed from exactly that layout.
 
+- **Formats:** Word (.docx), PDF, EPUB 3 (validated with EPUBCheck) and plain text (.txt, for submission forms that ask you to paste the story). Pick any combination.
 - **Two layouts:**
   - **Standard manuscript:** your name and contact details top left, the rounded word count top right, the title and byline just below (a subtitle that already names you replaces the byline), and *Surname / Title / page* at the top of every following page.
-  - **Contest (anonymous):** title and *Pseudonym: …* only, with page numbers at the bottom. A subtitle that names you (*Un relato de …*) is left out. Your name appears nowhere in the file, not even in its document properties. A note's `pseudonym` property overrides the default pseudonym.
-- **Options:** Times New Roman, Courier or Arial at 12 pt; double or 1.5 spacing; Letter or A4; chapters on a new page.
-- **What goes in:** the first `#` heading is the title and a heading right under it the subtitle (or your byline, which is dropped). Every line is a paragraph with a first-line indent. Italics and bold are kept, headings become section titles, scene-break lines (`***`, `---`, `#`, `⁂`) become a centered `#`, and the story ends with *FIN* / *END*. Callouts (concept art, author notes), comments, images, tables and code are left out. Centered and right-aligned paragraphs keep their alignment; justified ones are justified in the contest layout.
+  - **Contest (anonymous):** title and *Pseudonym: …* only, with page numbers at the bottom. A subtitle that names you (*Un relato de …*) is left out. Your name appears nowhere in the files, not even in their document properties. A note's `pseudonym` property overrides the default pseudonym.
+- **Options:** Times New Roman, Courier or Arial at 12 pt; double or 1.5 spacing; Letter or A4; scene-break symbol (`#`, `* * *`, `—` or a blank line); a **cover page**; chapters on a new page; **keep justified paragraphs**.
+- **Presets:** save the current options under a name (for example one per contest) and apply them in one tap. Presets never store your name or contact details.
+- **Whole projects:** export an **anthology note** (the stories whose `anthology` property links to it, plus any it links to in its text, in that order) or **a folder** (right-click → *Export folder as one manuscript…*). Notes are ordered by an `order` property, then `date_created`, then name. Each note becomes a chapter that starts on a new page, with the total word count on the first page.
+- **What goes in:** the first `#` heading is the title and a heading right under it the subtitle (or your byline, which is dropped). Every line is a paragraph with a first-line indent. Italics and bold are kept, headings become section titles, scene-break lines become the chosen symbol, and the text ends with *FIN* / *END*. Callouts (concept art, author notes), comments, images, tables and code are left out. Centered and right-aligned paragraphs keep their alignment. Poems keep their lines, indentation and stanzas.
+- Files are saved in an `Exports` folder next to the note (or inside the exported folder). Everything is generated inside Obsidian, with no internet connection, on desktop, iPhone and iPad.
+
+### Poetry mode
+
+Mark a note with `type: poem` (or `poema`, `poesía`), or add `poem` to its `cssclasses`, and it is treated as verse:
+
+- **Layout:** every line stays a line and keeps its indentation, in the editor and in Reading view (indented lines are no longer turned into code blocks, and lines aren't merged even with "strict line breaks" on). Long lines wrap with a **hanging indent**, a blank line separates stanzas, and `%%center%%` / `%%right%%` still align a stanza.
+- **Poem tab** in the writing panel:
+  - **Syllables per line.** Spanish uses *métrica*: syllables with *sinalefa* between words, *hiato* on accented weak vowels and the *ley del acento final* (aguda +1, esdrújula −1). Hover a line to see how the count was reached. English counts are approximate.
+  - **Rhyme scheme** by stanza (ABBA ABBA CDC DCD). In Spanish, consonant rhyme gets a letter and assonant rhyme a letter with ′; uppercase for *arte mayor*, lowercase for *arte menor*.
+  - **Form:** sonnet, haiku (5‑7‑5), *décima espinela*, *romance*, couplets to octaves, isometric verse or free verse.
+  - Tap a line to jump to it.
+- **Export:** single-spaced lines with their indentation, a blank line between stanzas, never justified.
+
+---`, `#`, `⁂`) become a centered `#`, and the story ends with *FIN* / *END*. Callouts (concept art, author notes), comments, images, tables and code are left out. Centered and right-aligned paragraphs keep their alignment; justified ones are justified in the contest layout.
 - Files are saved in an `Exports` folder next to the note. Everything is generated inside Obsidian, with no internet connection, on desktop, iPhone and iPad.
 
 ---
@@ -122,7 +141,8 @@ Turn a story note into a submission-ready **Word (.docx)** and/or **PDF** file: 
 | Clear spelling & grammar underlines | |
 | Set note language: Español / English / auto-detect | |
 | Convert dialogue dashes (- → —) in this note | |
-| Export manuscript as a document or PDF… | also in the note's ⋯ menu and the file explorer |
+| Export manuscript as a document or PDF… | also in the note's ⋯ menu and the file explorer; anthology notes export as a project |
+| Export folder as one manuscript… | right-click a folder in the file explorer |
 | Screenplay: new script… / adapt this story into a script / export as .fountain | |
 | Screenplay: format line as Scene heading / Action / Character / Parenthetical / Transition / Centered | also in the right-click menu in scripts |
 | Screenplay: insert page break | |
@@ -141,6 +161,8 @@ On iPhone and iPad, add the commands you use most to the mobile toolbar (**Setti
 | `format: short` / `feature` / `pilot` | Script length target shown in the Script tab. |
 | `title`, `credit`, `author`, `adapted_from`, `draft_date`, `contact` | Title page of the `.fountain` export. |
 | `title`, `pseudonym` | Title and pen name of an exported manuscript. |
+| `order` | Position of a chapter or story in a project export. |
+| `type: poem` (or `cssclasses: [poem]`) | Turns on poetry mode. |
 
 ## Settings
 
@@ -152,14 +174,15 @@ On iPhone and iPad, add the commands you use most to the mobile toolbar (**Setti
   - Reading and read-aloud speeds.
   - Long-sentence threshold and repetition window.
   - Crutch-word lists for English and Spanish.
+  - Count each line as a paragraph.
 - **Stories:**
   - Turn the dialogue dash on or off.
   - Story folders.
 - **Manuscript export:**
-  - Default layout and format.
+  - Default layout.
   - Font, line spacing and page size.
   - Contact details and pseudonym.
-  - Chapters on a new page.
+  - Chapters on a new page, keep justified paragraphs, scene-break symbol and cover page.
 - **Screenplays:**
   - Scripts folder and author name.
   - Smart Enter.
@@ -201,34 +224,20 @@ Everything else runs entirely on your device: statistics, style insights, outlin
 
 Ideas under consideration, roughly in order of priority. Nothing here is promised; suggestions are welcome in the issues.
 
-Recently done: the TypeScript rewrite and searchable settings (1.5.1), dialogue detection on every line (1.5.2), and manuscript export to Word and PDF with a live preview (1.6).
+Recently done: the TypeScript rewrite and searchable settings (1.5.1), dialogue detection on every line (1.5.2), manuscript export with a live preview (1.6), and EPUB, plain text, project export, presets and the first part of poetry mode (1.7). The step-by-step plan is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
 
-### Poetry mode (next)
+### Poetry mode (next steps)
 
-Prose formatting gets in the way of poetry. Markdown merges lines, eats indentation and justifies text. The plan is a dedicated mode for notes with `type: poem`:
+The first part of poetry mode is in (layout, syllables, rhyme scheme, form, export). Next:
 
-- **Layout:**
-  - **Lines stay as written.** Every line break is preserved, regardless of Obsidian's "strict line breaks" setting.
-  - **Stanzas** are separated by blank lines.
-  - **Indentation and spacing are preserved** for drop lines, staggered verse and concrete or visual poetry.
-  - **Hanging indent** for long lines that wrap, so wrapped text isn't mistaken for a new line.
-  - **Alignment per poem or per stanza:** left, centered or right; never justified.
-  - **Optional line numbers** (every 5 lines) for long poems and workshop drafts.
-  - **Epigraphs and dedications** styled as such, plus a title-and-poet block.
-- **Analysis:**
-  - **Syllable count per line.** Spanish métrica would account for *sinalefa*, *hiato* and the *ley del acento final*; English would get approximate stress patterns.
-  - **Rhyme scheme detection** (ABAB, ABBA…), with consonant and assonant rhyme in Spanish.
-  - **Form recognition and checks:** sonnet, haiku (5‑7‑5), décima, romance, villanelle, free verse.
-  - **A Poem tab** in the writing panel with stanzas, lines, the syllable count of each line, the rhyme scheme, and repeated sounds or words.
-- **Export:** PDF and Markdown that keep the exact layout.
+- **English meter:** stress patterns with a pronunciation dictionary (iambic pentameter and others).
+- **Optional line numbers** every 5 lines, and styles for epigraphs and dedications.
+- **Targets and warnings:** flag lines that break the poem's meter (for example a line of 10 in a sonnet of hendecasyllables).
+- **Sound and repetition:** alliteration and repeated words in the Poem tab; villanelle and other refrain forms.
+- **Collections:** poetry books through project export, one poem per page.
 
 ### Writing and manuscripts
-- **Export a whole project:** compile a folder of chapter notes, in order, into one Word or PDF manuscript, with a word count for the whole book.
-- **"Keep justified paragraphs" option** in the export window, so `%%justify%%` text stays justified in the standard manuscript layout too (today only the contest layout keeps it).
-- **EPUB export** for novellas and collections, built on the same manuscript model.
-- **Plain-text copy** of a story without hidden markers, comments or callouts, for submission forms that ask you to paste the text.
-- **More export layouts:** a choice of scene-break symbol, an optional cover page, and per-contest presets (font, spacing and page size saved under a name).
-- **Count each line as a paragraph** (optional), matching how lines read in Obsidian, for the paragraph count, words per paragraph and longest paragraphs.
+- **Table of contents** in Word and PDF project exports, and an EPUB cover image.
 - **Writing sprints:** a timer with a word target and a session summary.
 - **Per-project goals and history:** words per day, streaks, a progress chart.
 - **Revision mode:** compare two drafts, with word count differences per chapter.
@@ -257,6 +266,7 @@ Prose formatting gets in the way of poetry. Markdown merges lines, eats indentat
 - Page counts for scripts are estimates (55 lines per page with standard element widths), not exact pagination.
 - Statistics and style insights support English and Spanish; other languages fall back to English rules.
 - Obsidian's own spellcheck still runs alongside. On iPhone and iPad it follows the keyboard language.
+- Syllable counts and rhyme are estimates: poets bend the rules (*sinéresis*, *diéresis*, licences), and English has no stress analysis yet.
 - Exported PDFs use the PDF standard fonts (Times, Helvetica for Arial, Courier), which cover Spanish and Western European characters; other scripts print as "?". Word files use the real fonts.
 
 ---
@@ -295,8 +305,15 @@ src/
 │   ├── layout.ts            # page layout with font metrics, shared by the PDF and the preview
 │   ├── pdf.ts               # PDF writer (standard fonts, no dependencies)
 │   ├── docx.ts              # Word writer (Office Open XML)
+│   ├── epub.ts              # EPUB 3 writer
+│   ├── text.ts              # plain-text writer
 │   ├── zip.ts               # minimal ZIP writer for .docx
 │   └── widths.ts            # glyph widths of the PDF standard fonts
+├── poetry/
+│   ├── poem.ts              # poem-note detection
+│   ├── metrics.ts           # syllables (Spanish métrica, English), rhyme scheme, form
+│   ├── editor.ts            # verse layout in the editor and Reading view
+│   └── panel.ts             # Poem tab of the writing panel
 └── modals/
     ├── export-manuscript.ts # export window with live page preview
     ├── insert-image.ts
