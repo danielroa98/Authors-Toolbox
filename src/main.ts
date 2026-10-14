@@ -8,6 +8,7 @@ import { AlignMode, DEFAULTS, MARK, MODES, ToolboxPrefs, VIEW_WRITING } from "./
 import { alignView, applyAlign } from "./editor/alignment";
 import { DocRange, issueAt, issueField, issueRange, removeIssue, setFind, setIssues } from "./editor/issues";
 import { convertDialogueDashes, rayaExtension } from "./editor/raya";
+import { ExportManuscriptModal } from "./modals/export-manuscript";
 import { InsertImageModal } from "./modals/insert-image";
 import { NumberPrompt, TextPrompt } from "./modals/prompts";
 import { SCRIPTS_FOLDER_DEFAULT, ScriptSuggest, scriptTemplate, spAttrs, spKeymap, spPostProcess, spView } from "./screenplay/editor";
@@ -92,6 +93,7 @@ export default class AuthorsToolbox extends Plugin {
     this.addCommand({ id: "check-clear", name: "Clear spelling & grammar underlines", callback: () => this.clearCheck() });
     this.addCommand({ id: "script-new", name: "Screenplay: new script…", icon: "clapperboard", callback: () => this.newScript() });
     this.addCommand({ id: "script-adapt", name: "Screenplay: adapt this story into a script", icon: "clapperboard", callback: () => { void this.adaptStory(); } });
+    this.addCommand({ id: "manuscript-export", name: "Export manuscript as a document or PDF…", icon: "file-down", callback: () => { void this.exportManuscript(); } });
     this.addCommand({ id: "script-export", name: "Screenplay: export as .fountain", icon: "file-output", callback: () => { void this.exportFountain(); } });
     this.addCommand({ id: "script-toggle", name: "Screenplay: turn script formatting on/off for this note", icon: "film", callback: () => { void this.toggleScriptMode(); } });
     for (const [k, label, icon] of [["scene", "Scene heading", "clapperboard"], ["action", "Action", "pilcrow"], ["character", "Character", "user"], ["paren", "Parenthetical", "parentheses"], ["transition", "Transition", "arrow-right"], ["centered", "Centered", "align-center"]]) {
@@ -109,6 +111,10 @@ export default class AuthorsToolbox extends Plugin {
     this.addCommand({ id: "lang-en", name: "Set note language: English", callback: () => { void this.setNoteLang("en-US"); } });
     this.addCommand({ id: "lang-auto", name: "Set note language: auto-detect", callback: () => { void this.setNoteLang("auto"); } });
 
+    this.registerEvent(this.app.workspace.on("file-menu", (menu, file) => {
+      if (!(file instanceof TFile) || file.extension !== "md") return;
+      menu.addItem((i) => i.setTitle("Export manuscript…").setIcon("file-down").setSection("action").onClick(() => { void this.exportManuscript(file); }));
+    }));
     this.registerEvent(this.app.workspace.on("editor-menu", (menu, editor, view) => {
       menu.addSeparator();
       for (const [mode, info] of Object.entries(MODES) as [AlignMode, { label: string; icon: string }][]) {
@@ -681,6 +687,19 @@ export default class AuthorsToolbox extends Plugin {
         new Notice("Script created next to the story. Turn each scene of the story into a scene heading, action and dialogue.");
       })();
     }, "The script opens to the right of the story so you can adapt it scene by scene.").open();
+  }
+
+  /** Open the manuscript export window for a story note (the active one by default). */
+  async exportManuscript(file?: TFile): Promise<void> {
+    const v = this.target || this.app.workspace.getActiveViewOfType(MarkdownView);
+    const f = file ?? v?.file ?? null;
+    if (!f || f.extension !== "md") { new Notice("Open the story you want to export first."); return; }
+    const text = v && v.file === f && v.editor ? v.editor.getValue() : await this.app.vault.read(f);
+    if (isScriptText(text)) { new Notice("This note is a script. Use the screenplay export command for it instead."); return; }
+    const fm = (this.app.metadataCache.getFileCache(f)?.frontmatter ?? {}) as Record<string, unknown>;
+    const code = this.noteLang(f).code;
+    const lang = baseLang(code === "auto" ? detectLang(text) : code);
+    new ExportManuscriptModal(this.app, this, f, text, lang, fm).open();
   }
 
   async exportFountain(): Promise<void> {

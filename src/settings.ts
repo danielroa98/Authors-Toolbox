@@ -67,10 +67,23 @@ const GROUPS: Group[] = [
     ],
   },
   {
+    heading: "Manuscript export",
+    fields: [
+      { key: "exportLayout", kind: "dropdown", name: "Default layout", desc: "Standard manuscript shows your name, contact details and word count. The contest layout is anonymous: only the title and your pseudonym.", options: { manuscript: "Standard manuscript", contest: "Contest (anonymous)" } },
+      { key: "exportFormat", kind: "dropdown", name: "Default format", options: { both: "Word and PDF", docx: "Word (.docx)", pdf: "PDF" } },
+      { key: "exportFont", kind: "dropdown", name: "Font", options: { times: "Times New Roman", courier: "Courier", arial: "Arial" } },
+      { key: "exportSpacing", kind: "dropdown", name: "Line spacing", options: { "2": "Double", "1.5": "1.5 lines" } },
+      { key: "exportPage", kind: "dropdown", name: "Page size", options: { letter: "Letter", a4: "A4" } },
+      { key: "exportContact", kind: "textarea", name: "Contact details", desc: "Printed under your name on the first page of a standard manuscript, one item per line (city, email, phone…)." },
+      { key: "exportPseudonym", kind: "text", name: "Pseudonym", desc: "Used by the contest layout. A note's “pseudonym” property overrides it." },
+      { key: "exportChapterBreaks", kind: "toggle", name: "Start chapters on a new page", desc: "Each top-level heading begins a new page." },
+    ],
+  },
+  {
     heading: "Screenplays",
     fields: [
       { key: "scriptsFolder", kind: "folder", name: "Scripts folder", desc: "Folder where new scripts and story adaptations are created.", fallback: SCRIPTS_FOLDER_DEFAULT },
-      { key: "authorName", kind: "text", name: "Author name", desc: "Written on the title page of new scripts." },
+      { key: "authorName", kind: "text", name: "Author name", desc: "Written on the title page of new scripts and on exported manuscripts." },
       { key: "smartEnter", kind: "toggle", name: "Smart line breaks in scripts", desc: "After a character name or parenthetical, the return key starts the next dialogue line; after dialogue or action it starts a new element (blank line). Shift+Enter always inserts a plain line break. Reload the plugin after changing." },
     ],
   },

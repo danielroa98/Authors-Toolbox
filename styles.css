@@ -182,3 +182,24 @@
 .at-full { width: 100%; }
 .at-browse-bar { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
 .at-browse-path { color: var(--text-muted); font-size: var(--font-ui-smaller); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* manuscript export window */
+.modal.at-export-modal { width: min(1100px, 96vw); max-width: 96vw; }
+.at-export { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 16px; align-items: start; }
+.at-export-opts .setting-item { padding: 8px 0; }
+.at-export-opts textarea { width: 100%; min-height: 4em; }
+.at-export-preview { min-width: 0; }
+.at-export-summary { color: var(--text-muted); font-size: var(--font-ui-smaller); margin-bottom: 8px; }
+.at-export-pages { max-height: 70vh; overflow-y: auto; padding: 4px; background: var(--background-secondary); border-radius: var(--radius-m); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.is-phone .at-export { grid-template-columns: 1fr; }
+.is-phone .at-export-pages { max-height: 55vh; }
+/* a sheet is drawn at real size in points (1 pt = 1 px) and scaled down to fit */
+.at-pv-sheet { width: var(--at-pw); height: var(--at-ph); flex: none; overflow: hidden; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3); }
+.at-pv-page { position: relative; width: var(--at-pw); height: var(--at-ph); transform: scale(var(--at-scale)); transform-origin: 0 0; background: #fff; color: #111; font-size: var(--at-size); line-height: 1; }
+.at-pv-times { font-family: "Times New Roman", Times, "Liberation Serif", serif; }
+.at-pv-arial { font-family: Arial, Helvetica, "Liberation Sans", sans-serif; }
+.at-pv-courier { font-family: "Courier New", Courier, "Liberation Mono", monospace; }
+.at-pv-t { position: absolute; left: var(--at-x); top: var(--at-y); white-space: pre; word-spacing: var(--at-ws); }
+.at-pv-b { font-weight: 700; }
+.at-pv-i { font-style: italic; }
+.at-pv-bi { font-weight: 700; font-style: italic; }

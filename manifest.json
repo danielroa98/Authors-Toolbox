@@ -1,9 +1,9 @@
 {
   "id": "authors-toolbox",
   "name": "Authors Toolbox",
-  "version": "1.5.2",
+  "version": "1.6.0",
   "minAppVersion": "1.7.2",
-  "description": "Write fiction and screenplays with a writing panel: stats, a reorderable outline, style insights, English and Spanish grammar checks, paragraph alignment and Fountain scripts.",
+  "description": "Write fiction and screenplays with a writing panel: stats, outline, style insights, English and Spanish grammar checks, Fountain scripts and Word/PDF manuscript export.",
   "author": "Daniel Roa",
   "authorUrl": "https://github.com/danielroa98",
   "isDesktopOnly": false

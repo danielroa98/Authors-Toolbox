@@ -15,6 +15,7 @@ It works on **macOS, Windows, Linux, iPhone and iPad** and requires Obsidian 1.7
   - [Images in the text](#images-in-the-text)
   - [Spanish dialogue dash (raya)](#spanish-dialogue-dash-raya)
   - [Screenplay mode](#screenplay-mode)
+  - [Manuscript export (Word and PDF)](#manuscript-export-word-and-pdf)
 - [Commands](#commands)
 - [Note properties](#note-properties)
 - [Settings](#settings)
@@ -97,6 +98,17 @@ Notes with `type: script` are written in **[Fountain](https://fountain.io)**, th
 
 The spelling and grammar check skips character names, scene headings and transitions in scripts.
 
+### Manuscript export (Word and PDF)
+
+Turn a story note into a submission-ready **Word (.docx)** and/or **PDF** file: run *Export manuscript as a document or PDF…*, or choose **Export manuscript…** in the note's ⋯ menu or the file explorer. The export window shows a **live preview of every page** while you change the options, and the PDF is printed from exactly that layout.
+
+- **Two layouts:**
+  - **Standard manuscript:** your name and contact details top left, the rounded word count top right, the title and byline a third of the way down the first page, and *Surname / Title / page* at the top of every following page.
+  - **Contest (anonymous):** title and *Pseudonym: …* only, with page numbers at the bottom. Your name appears nowhere in the file, not even in its document properties. A note's `pseudonym` property overrides the default pseudonym.
+- **Options:** Times New Roman, Courier or Arial at 12 pt; double or 1.5 spacing; Letter or A4; chapters on a new page.
+- **What goes in:** the first `#` heading is the title and a heading right under it the subtitle (or your byline, which is dropped). Every line is a paragraph with a first-line indent. Italics and bold are kept, headings become section titles, scene-break lines (`***`, `---`, `#`, `⁂`) become a centered `#`, and the story ends with *FIN* / *END*. Callouts (concept art, author notes), comments, images, tables and code are left out. Centered and right-aligned paragraphs keep their alignment; justified ones are justified in the contest layout.
+- Files are saved in an `Exports` folder next to the note. Everything is generated inside Obsidian, with no internet connection, on desktop, iPhone and iPad.
+
 ---
 
 ## Commands
@@ -110,6 +122,7 @@ The spelling and grammar check skips character names, scene headings and transit
 | Clear spelling & grammar underlines | |
 | Set note language: Español / English / auto-detect | |
 | Convert dialogue dashes (- → —) in this note | |
+| Export manuscript as a document or PDF… | also in the note's ⋯ menu and the file explorer |
 | Screenplay: new script… / adapt this story into a script / export as .fountain | |
 | Screenplay: format line as Scene heading / Action / Character / Parenthetical / Transition / Centered | also in the right-click menu in scripts |
 | Screenplay: insert page break | |
@@ -127,6 +140,7 @@ On iPhone and iPad, add the commands you use most to the mobile toolbar (**Setti
 | `word_goal: 3000` | Word goal shown in the Stats tab. |
 | `format: short` / `feature` / `pilot` | Script length target shown in the Script tab. |
 | `title`, `credit`, `author`, `adapted_from`, `draft_date`, `contact` | Title page of the `.fountain` export. |
+| `title`, `pseudonym` | Title and pen name of an exported manuscript. |
 
 ## Settings
 
@@ -141,6 +155,11 @@ On iPhone and iPad, add the commands you use most to the mobile toolbar (**Setti
 - **Stories:**
   - Turn the dialogue dash on or off.
   - Story folders.
+- **Manuscript export:**
+  - Default layout and format.
+  - Font, line spacing and page size.
+  - Contact details and pseudonym.
+  - Chapters on a new page.
 - **Screenplays:**
   - Scripts folder and author name.
   - Smart Enter.
@@ -203,7 +222,7 @@ Prose formatting gets in the way of poetry. Markdown merges lines, eats indentat
 
 ### Writing and manuscripts
 - **Compile a manuscript** from several notes (chapters of a novel) into one document, with a word count for the whole book.
-- **Standard manuscript format export** (Shunn) to DOCX and PDF for submissions and contests.
+- **Export a whole project** (a folder of chapter notes, in order) as one manuscript, and EPUB for novellas and collections.
 - **Writing sprints:** a timer with a word target and a session summary.
 - **Per-project goals and history:** words per day, streaks, a progress chart.
 - **Revision mode:** compare two drafts, with word count differences per chapter.
@@ -232,6 +251,7 @@ Prose formatting gets in the way of poetry. Markdown merges lines, eats indentat
 - Page counts for scripts are estimates (55 lines per page with standard element widths), not exact pagination.
 - Statistics and style insights support English and Spanish; other languages fall back to English rules.
 - Obsidian's own spellcheck still runs alongside. On iPhone and iPad it follows the keyboard language.
+- Exported PDFs use the PDF standard fonts (Times, Helvetica for Arial, Courier), which cover Spanish and Western European characters; other scripts print as "?". Word files use the real fonts.
 
 ---
 
@@ -264,7 +284,15 @@ src/
 ├── view/
 │   ├── writing-view.ts      # the writing panel
 │   └── helpers.ts           # formatting helpers and labels
+├── export/
+│   ├── manuscript.ts        # story note → manuscript (title, headings, paragraphs, emphasis, scene breaks)
+│   ├── layout.ts            # page layout with font metrics, shared by the PDF and the preview
+│   ├── pdf.ts               # PDF writer (standard fonts, no dependencies)
+│   ├── docx.ts              # Word writer (Office Open XML)
+│   ├── zip.ts               # minimal ZIP writer for .docx
+│   └── widths.ts            # glyph widths of the PDF standard fonts
 └── modals/
+    ├── export-manuscript.ts # export window with live page preview
     ├── insert-image.ts
     └── prompts.ts
 ```

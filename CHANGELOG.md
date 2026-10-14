@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.0 — 2026-10-14
+- **Manuscript export to Word (.docx) and PDF**, from the command palette, the note's ⋯ menu or the file explorer.
+  - **Standard manuscript** layout: name, contact details, rounded word count, title page block and a *Surname / Title / page* header.
+  - **Contest (anonymous)** layout: title and pseudonym only, page numbers at the bottom, and no trace of your name in the file or its properties.
+  - Times New Roman, Courier or Arial; double or 1.5 spacing; Letter or A4; chapters on a new page.
+  - Italics, bold, headings, scene breaks and alignment are kept; callouts, comments and images are left out.
+- **Live preview** of every page in the export window, drawn from the same layout the PDF is printed from.
+- Works offline on desktop, iPhone and iPad, with no added dependencies.
+
 ## 1.5.2 — 2026-10-14
 - **Fix:** dialogue that starts with a raya (—) on its own line is now counted even when the line has no blank line before it (consecutive lines of one Markdown paragraph). Each line is checked separately, so narration after a closing raya ("—Ven. —dijo ella") still doesn't count as dialogue.
 

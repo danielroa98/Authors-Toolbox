@@ -55,6 +55,15 @@ export interface ToolboxPrefs {
   // stories
   autoRaya: boolean;
   storyFolders: string;
+  // manuscript export
+  exportLayout: "manuscript" | "contest";
+  exportFormat: "both" | "docx" | "pdf";
+  exportFont: "times" | "courier" | "arial";
+  exportSpacing: string;
+  exportPage: "letter" | "a4";
+  exportContact: string;
+  exportPseudonym: string;
+  exportChapterBreaks: boolean;
 }
 
 export const DEFAULTS: ToolboxPrefs = {
@@ -70,4 +79,7 @@ export const DEFAULTS: ToolboxPrefs = {
   panelTabScript: "sp-stats", scriptsFolder: "Scripts", smartEnter: true, authorName: "",
   // stories
   autoRaya: true, storyFolders: "",
+  // manuscript export
+  exportLayout: "manuscript", exportFormat: "both", exportFont: "times", exportSpacing: "2", exportPage: "letter",
+  exportContact: "", exportPseudonym: "", exportChapterBreaks: false,
 };
