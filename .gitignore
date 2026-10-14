@@ -4,3 +4,7 @@ node_modules/
 # never publish your own settings: they can contain personal data or API keys
 data.json
 .DS_Store
+# test bundle
+tests/.build/
+# transfer archives
+.*.tgz

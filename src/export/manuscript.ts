@@ -162,7 +162,8 @@ const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").tri
  * Every non-empty line is a paragraph (that's how lines read in Obsidian), headings become
  * section titles, scene-break lines (***, ---, #, ⁂…) become "#", and callouts, comments,
  * images, tables and code are left out. The first H1 is the title; a heading right under it
- * is the subtitle, unless it's just the author's name (a byline), which is dropped.
+ * is the subtitle, unless it's just the author's name (a byline), which is dropped, or the first
+ * of several sections at its level (a story that opens with "## Chapter 1").
  */
 export function buildManuscript(text: string, opts: { fallbackTitle: string; fmTitle?: string; authorNames: string[]; poem?: boolean }): Manuscript {
   const lines = text.split("\n");
@@ -172,6 +173,8 @@ export function buildManuscript(text: string, opts: { fallbackTitle: string; fmT
   let sawProse = false, titleTaken = false, subtitleSlot = false;
   let fence = false, comment = false, callout = false, blockAlign: Align = "left";
   const authors = opts.authorNames.map(norm).filter(Boolean);
+  const headingsAt = new Map<number, number>();
+  for (const l of lines) { const h = HEADING_RE.exec(l); if (h) headingsAt.set(h[2].length, (headingsAt.get(h[2].length) ?? 0) + 1); }
 
   for (let n = bodyStart(lines); n < lines.length; n++) {
     let L = lines[n];
@@ -220,8 +223,7 @@ export function buildManuscript(text: string, opts: { fallbackTitle: string; fmT
       if (!sawProse && subtitleSlot && !subtitle) {
         subtitleSlot = false;
         if (authors.includes(norm(plain))) continue;   // byline: the writer's name
-        subtitle = runs;
-        continue;
+        if ((headingsAt.get(level) ?? 0) < 2) { subtitle = runs; continue; }
       }
       subtitleSlot = false;
       if (blocks.length && blocks[blocks.length - 1].kind === "stanza") blocks.pop();

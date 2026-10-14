@@ -299,7 +299,15 @@ npm run dev     # rebuild main.js on every change (copy or symlink the folder in
 npm run lint    # Obsidian's official ESLint rules (the same checks as the directory's automated review)
 npm run typecheck  # TypeScript strict-mode check
 npm run build   # type-check + production build → main.js
+npm test        # behaviour tests (Node's test runner; Obsidian is mocked, CodeMirror and the DOM are real)
 ```
+
+The tests live in `tests/`: each `*.test.cjs` file loads the plugin into a small stand-in for Obsidian
+(`tests/support/obsidian-mock.cjs`) and drives it like a writer would: typing, moving sections, running the
+grammar check against a fake LanguageTool, exporting, writing sprints. The sample notes in `tests/fixtures/`
+were written for the tests. `npm test -- export` runs only the files whose name contains `export`.
+Every push and pull request runs type checking, lint and the tests (`.github/workflows/ci.yml`), and a release
+is only built when they pass.
 
 Source layout (TypeScript in strict mode, bundled by esbuild into `main.js`):
 
@@ -344,6 +352,10 @@ src/
     ├── export-manuscript.ts # export window with live page preview
     ├── insert-image.ts
     └── prompts.ts
+tests/
+├── *.test.cjs               # one file per area: plugin, screenplay, poetry, export, habits, analysis
+├── fixtures/                # sample notes
+└── support/                 # Obsidian mock, test helpers, bundle entry
 ```
 
 ### Releasing

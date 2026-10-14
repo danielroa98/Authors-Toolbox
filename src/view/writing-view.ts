@@ -3,7 +3,7 @@ import type { PoemAnalysis } from "../poetry/metrics";
 import { renderPoem } from "../poetry/panel";
 import { CheckScope, ToolboxPrefs, VIEW_WRITING } from "../constants";
 import { DocRange, issueRange } from "../editor/issues";
-import { scriptTabMethods, ScriptPanelState } from "../screenplay/panel";
+import { renderCast, renderNotes, renderScenes, renderScriptStats, type ScriptPanelState } from "../screenplay/panel";
 import { Analysis, Outline, OutlineNode, Para, Scene, Sentence, WordToken, lengthCategory } from "../text/analysis";
 import { IssueKind, KIND_LABEL, LANGS, fmtMin, fmtN } from "./helpers";
 import type { LtIssue } from "../text/analysis";
@@ -161,10 +161,10 @@ export class WritingView extends ItemView {
     const body = el.createDiv({ cls: "at-wp-body" });
     try {
       const spSt: ScriptPanelState | null = st.script && st.sOutline ? { ...st, script: st.script, sOutline: st.sOutline } : null;
-      if (spSt && cur === "sp-stats") this.renderScriptStats(body, spSt);
-      else if (spSt && cur === "sp-scenes") this.renderScenes(body, spSt);
-      else if (spSt && cur === "sp-cast") this.renderCast(body, spSt);
-      else if (spSt && cur === "sp-notes") this.renderNotes(body, spSt);
+      if (spSt && cur === "sp-stats") renderScriptStats(this, body, spSt);
+      else if (spSt && cur === "sp-scenes") renderScenes(this, body, spSt);
+      else if (spSt && cur === "sp-cast") renderCast(this, body, spSt);
+      else if (spSt && cur === "sp-notes") renderNotes(this, body, spSt);
       else if (st.poem && cur === "poem") renderPoem(body, st.poem, this.plugin);
       else if (cur === "outline") this.renderOutline(body, st);
       else if (cur === "style") this.renderStyle(body, st);
@@ -177,13 +177,6 @@ export class WritingView extends ItemView {
     }
     el.scrollTop = scroll;
   }
-
-  // Mixed in from scriptTabMethods (bottom of this file). `declare` emits nothing, so these
-  // never become instance fields that would hide the prototype methods.
-  declare renderScriptStats: (el: HTMLElement, st: ScriptPanelState) => void;
-  declare renderScenes: (el: HTMLElement, st: ScriptPanelState) => void;
-  declare renderCast: (el: HTMLElement, st: ScriptPanelState) => void;
-  declare renderNotes: (el: HTMLElement, st: ScriptPanelState) => void;
 
   /* ---------- Stats ---------- */
   renderOverview(el: HTMLElement, st: PluginState): void {
@@ -546,4 +539,3 @@ export class WritingView extends ItemView {
   }
 }
 
-Object.assign(WritingView.prototype, scriptTabMethods);
