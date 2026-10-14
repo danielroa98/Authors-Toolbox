@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.7.1 — 2026-10-14
+- **Poems:** hidden `%% … %%` comments (like the one in the poem template) are no longer shown as lines of verse in Reading view or counted in the Poem tab.
+
 ## 1.7.0 — 2026-10-14
 - **Poetry mode (first part)** for notes with `type: poem`:
   - Lines and indentation kept in the editor and Reading view, with a hanging indent for long lines.
