@@ -28,7 +28,9 @@ export function poemPostProcess(el: HTMLElement, ctx: MarkdownPostProcessorConte
   // leave headings, callouts, embeds, lists, tables and rules as Obsidian renders them
   if (el.querySelector(".callout, .frontmatter, .metadata-container, img, .internal-embed, h1, h2, h3, h4, h5, h6, ul, ol, table, hr")) return;
   const lines = info.text.split("\n").slice(info.lineStart, info.lineEnd + 1);
-  if (!lines.some((l) => l.trim()) || lines.some((l) => /^\s*(```|~~~)/.test(l) || /^\s*%%\s*$/.test(l))) return;
+  // skip code and hidden %% comments (but not %%center%%-style alignment markers)
+  const isComment = (l: string) => /^\s*%%/.test(l) && !MARK.test(l.trimStart());
+  if (!lines.some((l) => l.trim()) || lines.some((l) => /^\s*(```|~~~)/.test(l) || isComment(l))) return;
   el.empty();
   el.addClass("at-poem-sec");
   const stanza = el.createDiv({ cls: "at-stanza" });
