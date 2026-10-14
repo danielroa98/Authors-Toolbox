@@ -14,6 +14,12 @@ import type { ProjectEntry } from "./export/manuscript";
 import { isPoemFM, isPoemText } from "./poetry/poem";
 import { poemAttrs, poemPostProcess } from "./poetry/editor";
 import { analyzePoem } from "./poetry/metrics";
+import { GenreModal } from "./habits/genre-modal";
+import { genresOf } from "./habits/genres";
+import { HISTORY_DAYS, dayKey, prune, renamePath, streaks } from "./habits/log";
+import { SprintSummaryModal, StartSprintModal, fmtClock, sprintWords } from "./habits/sprint";
+import type { SprintRecord, SprintState } from "./habits/sprint";
+import { HabitsView, VIEW_HABITS, filesIn } from "./habits/view";
 
 /** A front-matter value as text ("a, b" for lists). */
 function fmText(v: unknown): string {
@@ -161,7 +167,27 @@ export default class AuthorsToolbox extends Plugin {
     this.registerEvent(this.app.metadataCache.on("changed", (file) => {
       if (this.target && this.target.file && file.path === this.target.file.path) this.refreshSoon();
     }));
-    this.registerEvent(this.app.vault.on("rename", () => this.refreshSoon()));
+    this.registerEvent(this.app.vault.on("rename", (file, oldPath) => {
+      // keep a renamed note's writing history
+      if (this.prefs.daily && renamePath(this.prefs.daily, oldPath, file.path)) this.saveSettingsSoon();
+      this.refreshSoon();
+    }));
+
+    // writing habits
+    this.registerView(VIEW_HABITS, (leaf) => new HabitsView(leaf, this));
+    this.addRibbonIcon("flame", "Writing habits", () => { void this.openHabits(); });
+    this.addCommand({ id: "habits-open", name: "Open writing habits", icon: "flame", callback: () => { void this.openHabits(); } });
+    this.addCommand({ id: "sprint-start", name: "Start a writing sprint…", icon: "timer", callback: () => this.openSprint() });
+    this.addCommand({ id: "sprint-stop", name: "Stop the writing sprint", icon: "timer-off", checkCallback: (checking) => { if (!this.sprint) return false; if (!checking) this.finishSprint(true); return true; } });
+    this.addCommand({ id: "genre-set", name: "Set genre of this note…", icon: "tags", checkCallback: (checking) => {
+      const f = this.app.workspace.getActiveFile();
+      if (!f || f.extension !== "md") return false;
+      if (!checking) this.openGenre(f);
+      return true;
+    } });
+    this.statusEl = this.addStatusBarItem();
+    this.statusEl.addClass("at-sprint-status");
+    this.registerInterval(window.setInterval(() => this.sprintTick(), 1000));
 
     this.addSettingTab(new ToolboxSettings(this.app, this));
 
@@ -178,6 +204,7 @@ export default class AuthorsToolbox extends Plugin {
 
   override onunload(): void {
     this.app.workspace.getLeavesOfType(VIEW_WRITING).forEach((l) => l.detach());
+    this.app.workspace.getLeavesOfType(VIEW_HABITS).forEach((l) => l.detach());
   }
 
   async saveSettings(): Promise<void> { await this.saveData(this.prefs); }
@@ -307,11 +334,118 @@ export default class AuthorsToolbox extends Plugin {
   trackDaily(path: string, wordCount: number): void {
     const d = this.prefs.daily || (this.prefs.daily = {});
     const key = todayKey();
-    for (const k of Object.keys(d)) if (k < key && Object.keys(d).length > 14) delete d[k];
+    // keep about 13 months of history for the writing-habits dashboard
+    if (prune(d, key, HISTORY_DAYS)) this.saveSettingsSoon();
     const day = d[key] || (d[key] = {});
     const e = day[path];
     if (!e) { day[path] = { s: wordCount, l: wordCount }; this.saveSettingsSoon(); }
     else if (e.l !== wordCount) { e.l = wordCount; this.saveSettingsSoon(); }
+  }
+
+  /* ---------- writing habits ---------- */
+
+  sprint: SprintState | null = null;
+  private statusEl: HTMLElement | null = null;
+
+  async openHabits(): Promise<void> {
+    const ws = this.app.workspace;
+    const existing = ws.getLeavesOfType(VIEW_HABITS)[0];
+    const leaf = existing ?? ws.getLeaf("tab");
+    if (!existing) await leaf.setViewState({ type: VIEW_HABITS, active: true });
+    await ws.revealLeaf(leaf);
+  }
+
+  private habitViews(): HabitsView[] {
+    return this.app.workspace.getLeavesOfType(VIEW_HABITS).map((l) => l.view).filter((v): v is HabitsView => v instanceof HabitsView);
+  }
+
+  /** Markdown notes in the writing folders (setting), or the story folders and the scripts folder. */
+  writingFiles(): TFile[] {
+    const lines = (this.prefs.writingFolders.trim() ? this.prefs.writingFolders : `${this.prefs.storyFolders}\n${this.prefs.scriptsFolder}`)
+      .split(/[\n,]/).map((x) => normalizePath(x.trim())).filter((x) => x && x !== "/");
+    const folders = lines.map((p) => this.app.vault.getAbstractFileByPath(p)).filter((f): f is TFolder => f instanceof TFolder);
+    return filesIn(folders);
+  }
+
+  /** Genres already used in the writing folders, for the genre picker. */
+  knownGenres(): string[] {
+    const out = new Set<string>();
+    for (const f of this.writingFiles()) for (const g of genresOf(this.app.metadataCache.getFileCache(f)?.frontmatter)) out.add(g);
+    return [...out];
+  }
+
+  openGenre(file: TFile, after?: () => void): void {
+    const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+    new GenreModal(this.app, file.basename, genresOf(fm), this.knownGenres(), (genres) => {
+      void this.app.fileManager.processFrontMatter(file, (f: Record<string, unknown>) => {
+        for (const k of ["genres", "género", "genero"]) delete f[k];
+        if (genres.length) f.genre = genres; else delete f.genre;
+      }).then(() => { new Notice(genres.length ? `Genre: ${genres.join(", ")}` : "Genre removed."); after?.(); });
+    }).open();
+  }
+
+  openSprint(): void {
+    if (this.sprint) { new Notice("A sprint is already running."); return; }
+    new StartSprintModal(this.app, this.prefs.sprintMinutes || 25, this.prefs.sprintTarget, (minutes, target) => this.startSprint(minutes, target)).open();
+  }
+
+  startSprint(minutes: number, target: number): void {
+    // make sure the current note's count is in the log before taking the starting point
+    if (this.target) this.refresh();
+    const today = dayKey(new Date());
+    const log = this.prefs.daily ?? {};
+    let start = 0;
+    for (const e of Object.values(log[today] ?? {})) start += Math.max(0, e.l - e.s);
+    this.sprint = { start: Date.now(), minutes, target, startDay: today, startWords: start };
+    this.prefs.sprintMinutes = minutes; this.prefs.sprintTarget = target;
+    void this.saveSettings();
+    new Notice(`Sprint started: ${minutes} min${target ? `, ${target} words` : ""}. Go!`);
+    this.sprintTick();
+  }
+
+  finishSprint(early: boolean): void {
+    const sp = this.sprint;
+    if (!sp) return;
+    if (this.target) this.refresh();
+    this.sprint = null;
+    const words = sprintWords(this.prefs.daily ?? {}, sp, dayKey(new Date()));
+    const elapsed = Math.min(sp.minutes, (Date.now() - sp.start) / 60000);
+    const rec: SprintRecord = { start: new Date(sp.start).toISOString(), minutes: sp.minutes, elapsed, target: sp.target, words };
+    const best = (this.prefs.sprints ?? []).reduce((a, r) => Math.max(a, r.words), 0);
+    if (elapsed >= 1 || words > 0) {
+      this.prefs.sprints = [...(this.prefs.sprints ?? []), rec].slice(-200);
+      void this.saveSettings();
+    }
+    this.statusEl?.setText("");
+    new SprintSummaryModal(this.app, rec, best, early).open();
+    this.renderPanels();
+    this.habitViews().forEach((v) => v.render());
+  }
+
+  /** Runs every second: updates the countdown and ends the sprint on time. */
+  private sprintTick(): void {
+    const sp = this.sprint;
+    if (!sp) return;
+    const left = sp.start + sp.minutes * 60000 - Date.now();
+    if (left <= 0) { this.finishSprint(false); return; }
+    const words = sprintWords(this.prefs.daily ?? {}, sp, dayKey(new Date()));
+    const text = `Sprint ${fmtClock(left)} · ${words}${sp.target ? `/${sp.target}` : ""} words`;
+    this.statusEl?.setText(text);
+    // live countdown in the writing panel and the habits dashboard
+    for (const el of [...this.panels().map((p) => p.contentEl), ...this.habitViews().map((v) => v.contentEl)]) {
+      el.querySelectorAll(".at-sprint-clock").forEach((c) => c.setText(fmtClock(left)));
+      el.querySelectorAll(".at-sprint-words").forEach((c) => c.setText(`${words}${sp.target ? ` / ${sp.target}` : ""}`));
+    }
+  }
+
+  /** Streak and goal for the Stats tab. */
+  habitSummary(): { goal: number; today: number; streak: number; todayDone: boolean } {
+    const log = this.prefs.daily ?? {};
+    const today = dayKey(new Date());
+    let t = 0;
+    for (const e of Object.values(log[today] ?? {})) t += Math.max(0, e.l - e.s);
+    const st = streaks(log, today, this.prefs.dailyGoal);
+    return { goal: this.prefs.dailyGoal, today: t, streak: st.current, todayDone: st.todayDone };
   }
 
   todayWords(path: string): { total: number; note: number } {

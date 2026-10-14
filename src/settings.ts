@@ -68,6 +68,15 @@ const GROUPS: Group[] = [
     ],
   },
   {
+    heading: "Writing habits",
+    fields: [
+      { key: "dailyGoal", kind: "number", name: "Daily word goal", desc: "Words to write each day, across all notes. Streaks count the days that reach it (any writing when it's 0).", allowZero: true },
+      { key: "writingFolders", kind: "textarea", name: "Writing folders", desc: "Folders with your works, one per line, for the genre, form and project breakdowns. Empty: the story folders and the scripts folder." },
+      { key: "sprintMinutes", kind: "number", name: "Default sprint length (minutes)", fallback: 25 },
+      { key: "sprintTarget", kind: "number", name: "Default sprint word target", desc: "Leave at zero for no target.", allowZero: true },
+    ],
+  },
+  {
     heading: "Manuscript export",
     fields: [
       { key: "exportLayout", kind: "dropdown", name: "Default layout", desc: "Standard manuscript shows your name, contact details and word count. The contest layout is anonymous: only the title and your pseudonym.", options: { manuscript: "Standard manuscript", contest: "Contest (anonymous)" } },

@@ -64,19 +64,25 @@ story note(s) ──► manuscript model ──► page layout ──► PDF wri
 | **Poem tab** | `poetry/panel.ts` | Lines, stanzas, words, form; each line with its syllable count and rhyme letter; tap a line to jump to it. |
 | **Poem-aware export** | `export/manuscript.ts` (`verse` blocks), all writers | Lines kept as written, indentation preserved, single-spaced within stanzas, a blank line between stanzas, never justified. |
 
-## Phase 5 — Poetry, next ⏳
+## Phase 5 — Writing habits 🚧 (1.8.0: all but revision mode)
+
+| Item | Where | Done when |
+|---|---|---|
+| **Long history** ✅ | `habits/log.ts`; `main.ts` (`trackDaily`) | Words written per note per day kept for about 13 months (was 14 days); renamed notes keep their history. |
+| **Daily goal and streaks** ✅ | settings; `habits/log.ts` | A daily word goal; current and best streak (days that reach the goal, or any writing without a goal); shown in the Stats tab and the dashboard. |
+| **Writing sprints** ✅ | `habits/sprint.ts` | Start a timed sprint (minutes + word target) from a command or the dashboard; live countdown and word count in the status bar and the writing panel; a summary at the end (words, words per minute, target met); a sprint log. |
+| **Writing habits dashboard** ✅ | `habits/view.ts` | Words per day for the last 30 / 90 / 365 days with the goal line; totals for today, this week, this month; sprint statistics. |
+| **Genres** ✅ | `habits/genres.ts`; dashboard; *Set genre of this note…* | Each work's `genre` property (one or several). The dashboard shows where your words go by genre (words written in the period) and how many works and words you have per genre, names the genre you write most, and lists untagged works so they can be tagged in place. |
+| **Forms and projects** ✅ | dashboard | The same breakdown by form (story, poem, screenplay, article…) and per project (anthology): works, total words, `word_goal` progress, recent words. |
+| **Revision mode** ⏳ | next | Save a draft snapshot and compare the note with it: words added and removed per chapter, changed paragraphs. |
+
+## Phase 6 — Poetry, next ⏳
 
 - Stress patterns (meter) for English: iambic pentameter detection with a pronunciation dictionary.
 - Optional line numbers every 5 lines; epigraph and dedication styles.
 - Alignment per stanza; per-line syllable target with warnings (e.g. all lines of a sonnet at 11).
 - Sound repetition (alliteration, repeated words) in the Poem tab.
 - Poetry collections through project export (one poem per page).
-
-## Phase 6 — Writing habits ⏳
-
-- **Writing sprints:** a timer with a word target and a session summary.
-- **Per-project goals and history:** words per day, streaks, a progress chart (builds on the daily word log).
-- **Revision mode:** compare two drafts, with word-count differences per chapter.
 
 ---
 

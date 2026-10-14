@@ -1,3 +1,4 @@
+import type { SprintRecord } from "./habits/sprint";
 // Each aligned paragraph carries a hidden Obsidian comment at its start, e.g.  %%center%%Some text
 export const MARK = /^(\s{0,3}(?:#{1,6}[ \t]+)?)%%(center|right|left|justify)%%/;
 
@@ -78,6 +79,14 @@ export interface ToolboxPrefs {
   exportPresets: Record<string, ExportPreset>;
   /** Count every line as a paragraph in the statistics. */
   linesAsParagraphs: boolean;
+  // writing habits
+  dailyGoal: number;
+  /** Folders with your works (one per line); empty = story folders + scripts folder. */
+  writingFolders: string;
+  sprintMinutes: number;
+  sprintTarget: number;
+  sprints: SprintRecord[];
+  habitsRange: string;
   exportFont: "times" | "courier" | "arial";
   exportSpacing: string;
   exportPage: "letter" | "a4";
@@ -101,6 +110,7 @@ export const DEFAULTS: ToolboxPrefs = {
   autoRaya: true, storyFolders: "",
   // manuscript export
   exportLayout: "manuscript", exportFormats: "docx,pdf", exportKeepJustify: false, exportSceneBreak: "#", exportCoverPage: false,
-  exportPresets: {}, linesAsParagraphs: false, exportFont: "times", exportSpacing: "2", exportPage: "letter",
+  exportPresets: {}, linesAsParagraphs: false,
+  dailyGoal: 0, writingFolders: "", sprintMinutes: 25, sprintTarget: 500, sprints: [], habitsRange: "30", exportFont: "times", exportSpacing: "2", exportPage: "letter",
   exportContact: "", exportPseudonym: "", exportChapterBreaks: false,
 };

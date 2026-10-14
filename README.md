@@ -17,6 +17,7 @@ It works on **macOS, Windows, Linux, iPhone and iPad** and requires Obsidian 1.7
   - [Screenplay mode](#screenplay-mode)
   - [Manuscript export (Word, PDF, EPUB, text)](#manuscript-export-word-pdf-epub-text)
   - [Poetry mode](#poetry-mode)
+  - [Writing habits](#writing-habits)
 - [Commands](#commands)
 - [Note properties](#note-properties)
 - [Settings](#settings)
@@ -125,6 +126,17 @@ Mark a note with `type: poem` (or `poema`, `poesía`), or add `poem` to its `css
   - Tap a line to jump to it.
 - **Export:** single-spaced lines with their indentation, a blank line between stanzas, never justified.
 
+### Writing habits
+
+Open **Writing habits** (ribbon flame icon or command) for a dashboard of how and what you write:
+
+- **Words per day** for the last 30, 90 or 365 days (weekly bars for the year), with your **daily goal** as a line. "Words written" counts what each note grew by in a day, so editing and cutting don't erase a day's work. About 13 months of history are kept, and renamed notes keep theirs.
+- **Today, this week, this month**, writing days, and your **current and best streak** (days that reach the daily goal, or any writing when there's no goal). The Stats tab shows today's goal progress and the streak too.
+- **Writing sprints:** *Start a writing sprint…* sets a timer and a word target. A countdown and the words written appear in the status bar and the writing panel; at the end a summary shows words, words per minute and whether you hit the target. Words in any note count.
+- **Genres:** give each work a `genre` property (one or several: `genre: [terror, cuento urbano]`), or use *Set genre of this note…*, which suggests the genres you already use. The dashboard shows **which genre you write most** in the period, words written per genre, and how many works and words you have in each. Works without a genre are listed so you can tag them in place.
+- **Forms and projects:** the same breakdown by form (story, poem, screenplay, article…, from `type`) and per project (from `anthology`), with progress towards a project's `word_goal`.
+- The breakdowns read the notes in your **writing folders** (a setting; by default the story folders and the scripts folder).
+
 ---`, `#`, `⁂`) become a centered `#`, and the story ends with *FIN* / *END*. Callouts (concept art, author notes), comments, images, tables and code are left out. Centered and right-aligned paragraphs keep their alignment; justified ones are justified in the contest layout.
 - Files are saved in an `Exports` folder next to the note. Everything is generated inside Obsidian, with no internet connection, on desktop, iPhone and iPad.
 
@@ -143,6 +155,8 @@ Mark a note with `type: poem` (or `poema`, `poesía`), or add `poem` to its `css
 | Convert dialogue dashes (- → —) in this note | |
 | Export manuscript as a document or PDF… | also in the note's ⋯ menu and the file explorer; anthology notes export as a project |
 | Export folder as one manuscript… | right-click a folder in the file explorer |
+| Open writing habits / Start a writing sprint… / Stop the writing sprint | |
+| Set genre of this note… | |
 | Screenplay: new script… / adapt this story into a script / export as .fountain | |
 | Screenplay: format line as Scene heading / Action / Character / Parenthetical / Transition / Centered | also in the right-click menu in scripts |
 | Screenplay: insert page break | |
@@ -162,6 +176,8 @@ On iPhone and iPad, add the commands you use most to the mobile toolbar (**Setti
 | `title`, `credit`, `author`, `adapted_from`, `draft_date`, `contact` | Title page of the `.fountain` export. |
 | `title`, `pseudonym` | Title and pen name of an exported manuscript. |
 | `order` | Position of a chapter or story in a project export. |
+| `genre` (or `genres`, `género`) | Genres of a work, for the writing-habits breakdown. |
+| `word_goal` on a project note | Word goal of an anthology or collection. |
 | `type: poem` (or `cssclasses: [poem]`) | Turns on poetry mode. |
 
 ## Settings
@@ -178,6 +194,9 @@ On iPhone and iPad, add the commands you use most to the mobile toolbar (**Setti
 - **Stories:**
   - Turn the dialogue dash on or off.
   - Story folders.
+- **Writing habits:**
+  - Daily word goal and writing folders.
+  - Default sprint length and word target.
 - **Manuscript export:**
   - Default layout.
   - Font, line spacing and page size.
@@ -224,9 +243,16 @@ Everything else runs entirely on your device: statistics, style insights, outlin
 
 Ideas under consideration, roughly in order of priority. Nothing here is promised; suggestions are welcome in the issues.
 
-Recently done: the TypeScript rewrite and searchable settings (1.5.1), dialogue detection on every line (1.5.2), manuscript export with a live preview (1.6), and EPUB, plain text, project export, presets and the first part of poetry mode (1.7). The step-by-step plan is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+Recently done: the TypeScript rewrite and searchable settings (1.5.1), dialogue detection on every line (1.5.2), manuscript export with a live preview (1.6), EPUB, plain text, project export, presets and the first part of poetry mode (1.7), and writing habits with sprints, streaks and genre tracking (1.8). The step-by-step plan is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
 
-### Poetry mode (next steps)
+### Writing habits: next steps
+- **Revision mode:** save a draft snapshot and compare the note with it, with words added and removed per chapter.
+- **Calendar heatmap** of writing days, weekly or monthly goals, and a goal per genre.
+
+### Writing and manuscripts
+- **Table of contents** in Word and PDF project exports, and an EPUB cover image.
+
+### Poetry mode: next steps
 
 The first part of poetry mode is in (layout, syllables, rhyme scheme, form, export). Next:
 
@@ -235,12 +261,6 @@ The first part of poetry mode is in (layout, syllables, rhyme scheme, form, expo
 - **Targets and warnings:** flag lines that break the poem's meter (for example a line of 10 in a sonnet of hendecasyllables).
 - **Sound and repetition:** alliteration and repeated words in the Poem tab; villanelle and other refrain forms.
 - **Collections:** poetry books through project export, one poem per page.
-
-### Writing and manuscripts
-- **Table of contents** in Word and PDF project exports, and an EPUB cover image.
-- **Writing sprints:** a timer with a word target and a session summary.
-- **Per-project goals and history:** words per day, streaks, a progress chart.
-- **Revision mode:** compare two drafts, with word count differences per chapter.
 
 ### Screenplays
 - **Exact pagination** and a screenplay-ready **PDF export** (Courier 12 pt, standard margins, title page, `(MORE)`/`(CONT'D)` across pages, scene numbers), reusing the PDF engine and live preview of the manuscript export.
@@ -314,6 +334,12 @@ src/
 │   ├── metrics.ts           # syllables (Spanish métrica, English), rhyme scheme, form
 │   ├── editor.ts            # verse layout in the editor and Reading view
 │   └── panel.ts             # Poem tab of the writing panel
+├── habits/
+│   ├── log.ts               # daily history: words written, streaks, totals, per-group sums
+│   ├── genres.ts            # genre, form and project of a work from its properties
+│   ├── sprint.ts            # sprint timing, start and summary windows
+│   ├── genre-modal.ts       # genre picker
+│   └── view.ts              # writing-habits dashboard
 └── modals/
     ├── export-manuscript.ts # export window with live page preview
     ├── insert-image.ts

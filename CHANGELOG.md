@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.8.0 — 2026-10-14
+- **Writing habits dashboard** (ribbon flame icon or *Open writing habits*): words per day for 30, 90 or 365 days with a daily goal line, totals for today, the week and the month, writing days, and current and best streaks.
+- **Genre tracking:** a `genre` property on each work (or *Set genre of this note…*). The dashboard shows the genre you write most, words written per genre, works and words per genre, and lists untagged works to tag in place. The same breakdown by form (story, poem, screenplay, article) and by project, with project word goals.
+- **Writing sprints:** a timer with a word target, a live countdown in the status bar and the writing panel, a summary at the end and a sprint log.
+- **Daily goal and streak** in the Stats tab.
+- History of words written now covers about 13 months (was 14 days), and survives renaming a note.
+- **Fix:** poem lines use a hanging indent that works on every supported Obsidian version (no `text-indent`).
+
 ## 1.7.1 — 2026-10-14
 - **Poems:** hidden `%% … %%` comments (like the one in the poem template) are no longer shown as lines of verse in Reading view or counted in the Poem tab.
 

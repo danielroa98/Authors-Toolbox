@@ -55,6 +55,11 @@ export interface WritingViewPlugin {
   ignoreIssue(id: string): void;
   addToDictionary(id: string): Promise<void>;
   cmOf(view: MarkdownView | null): EditorView | null;
+  sprint: { start: number; minutes: number; target: number } | null;
+  openHabits(): Promise<void>;
+  openSprint(): void;
+  finishSprint(early: boolean): void;
+  habitSummary(): { goal: number; today: number; streak: number; todayDone: boolean };
 }
 
 interface OutlineRow {
@@ -142,6 +147,17 @@ export class WritingView extends ItemView {
         b.createSpan({ cls: "at-badge", text: String(this.plugin.check.issues.size) });
       b.onclick = (): void => { this.plugin.prefs[tabKey] = id; this.plugin.saveSettingsSoon(); this.render(); };
     }
+    const sp = this.plugin.sprint;
+    if (sp) {
+      // live sprint banner (the clock is updated every second by the plugin)
+      const bar = el.createDiv({ cls: "at-sprint-live" });
+      bar.createSpan({ cls: "at-sprint-clock", text: "" });
+      bar.createSpan({ text: " left · " });
+      bar.createSpan({ cls: "at-sprint-words", text: "" });
+      bar.createSpan({ text: " words" });
+      const stop = bar.createEl("button", { cls: "at-link", text: "Stop" });
+      stop.onclick = (): void => this.plugin.finishSprint(true);
+    }
     const body = el.createDiv({ cls: "at-wp-body" });
     try {
       const spSt: ScriptPanelState | null = st.script && st.sOutline ? { ...st, script: st.script, sOutline: st.sOutline } : null;
@@ -196,10 +212,22 @@ export class WritingView extends ItemView {
     }
 
     const today = this.plugin.todayWords(st.file.path);
-    if (today.total !== 0 || today.note !== 0) {
-      const t = el.createDiv({ cls: "at-today" });
-      const sign = (n: number): string => (n > 0 ? "+" : "") + fmtN(n);
-      t.setText(`Today: ${sign(today.total)} words in all notes · ${sign(today.note)} in this one`);
+    const hs = this.plugin.habitSummary();
+    const t = el.createDiv({ cls: "at-today" });
+    const sign = (n: number): string => (n > 0 ? "+" : "") + fmtN(n);
+    if (today.total !== 0 || today.note !== 0) t.createDiv({ text: `Today: ${sign(today.total)} words in all notes · ${sign(today.note)} in this one` });
+    if (hs.goal) {
+      const pctDone = Math.min(100, Math.round((hs.today / hs.goal) * 100));
+      t.createDiv({ cls: "at-bar" }).createDiv({ cls: "at-bar-fill" }).setCssProps({ "--at-pct": pctDone + "%" });
+      t.createDiv({ text: `Daily goal: ${fmtN(hs.today)} / ${fmtN(hs.goal)} (${pctDone}%)` });
+    }
+    const habits = t.createDiv({ cls: "at-today-row" });
+    if (hs.streak) habits.createSpan({ text: `🔥 ${hs.streak}-day streak${hs.todayDone ? "" : " · write today to keep it"}` });
+    const open = habits.createEl("button", { cls: "at-link", text: "Writing habits" });
+    open.onclick = (): void => { void this.plugin.openHabits(); };
+    if (!this.plugin.sprint) {
+      const spr = habits.createEl("button", { cls: "at-link", text: "Start a sprint" });
+      spr.onclick = (): void => this.plugin.openSprint();
     }
 
     const grid = el.createDiv({ cls: "at-grid" });
