@@ -1,0 +1,1 @@
+Authors Toolbox · [Repository](https://github.com/danielroa98/Authors-Toolbox) · [Releases](https://github.com/danielroa98/Authors-Toolbox/releases) · [Changelog](https://github.com/danielroa98/Authors-Toolbox/blob/main/CHANGELOG.md) · [Report a problem](https://github.com/danielroa98/Authors-Toolbox/issues) · MIT License

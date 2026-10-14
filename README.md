@@ -1,8 +1,25 @@
 # Authors Toolbox
 
-**Writing tools for fiction writers and screenwriters in [Obsidian](https://obsidian.md).** It adds a writing panel with statistics, a reorderable outline, style insights and an English/Spanish spelling and grammar check. It also covers paragraph alignment, images in the text, Spanish dialogue dashes, and a complete screenplay mode based on [Fountain](https://fountain.io).
+**Writing tools for fiction writers, poets and screenwriters in [Obsidian](https://obsidian.md).** A writing panel with statistics, a reorderable outline and style insights; an English and Spanish spelling and grammar check; screenplay and poetry modes; submission-ready Word, PDF and EPUB export; a writing-habits dashboard with goals, streaks, sprints and genres; and a revision mode that keeps drafts and shows what changed, down to the word.
 
-It works on **macOS, Windows, Linux, iPhone and iPad** and requires Obsidian 1.7.2 or later. It uses no Node.js or Electron APIs, and every control is touch-friendly.
+It works on **macOS, Windows, Linux, iPhone and iPad** and requires Obsidian 1.7.2 or later. It uses no Node.js or Electron APIs, has no runtime dependencies, works offline except for the grammar check, and every control is touch-friendly.
+
+📖 **[Read the wiki](https://github.com/danielroa98/Authors-Toolbox/wiki)** for a detailed guide to every feature, with screenshots, and an explanation of how it all works.
+
+![The writing panel next to a story](docs/wiki/images/hero.png)
+
+<table>
+<tr>
+<td width="33%"><img src="docs/wiki/images/script.png" alt="Screenplay mode"><br><sub><b>Screenplays</b> in Fountain, formatted as you type</sub></td>
+<td width="33%"><img src="docs/wiki/images/export.png" alt="Manuscript export"><br><sub><b>Manuscript export</b> with a live page preview</sub></td>
+<td width="33%"><img src="docs/wiki/images/revision-card.png" alt="Revision mode"><br><sub><b>Revision mode</b>: what changed since a draft</sub></td>
+</tr>
+<tr>
+<td><img src="docs/wiki/images/poem.png" alt="Poetry mode"><br><sub><b>Poetry</b>: métrica, rhyme scheme and form</sub></td>
+<td><img src="docs/wiki/images/habits-card.png" alt="Writing habits"><br><sub><b>Writing habits</b>: goals, streaks and genres</sub></td>
+<td><img src="docs/wiki/images/check.png" alt="Spelling and grammar"><br><sub><b>Spelling and grammar</b> in English and Spanish</sub></td>
+</tr>
+</table>
 
 ---
 
@@ -35,14 +52,15 @@ It works on **macOS, Windows, Linux, iPhone and iPad** and requires Obsidian 1.7
 
 ### Writing panel
 
-A sidebar for the note you're working on. Open it from the **pen icon** in the ribbon or with the command **Open writing panel**. It updates as you type.
+A sidebar for the note you're working on. Open it from the **pen icon** in the ribbon or with the command **Open writing panel**. It updates as you type. Poems and scripts get their own tabs (see below). [More in the wiki](https://github.com/danielroa98/Authors-Toolbox/wiki/Writing-panel).
 
 | Tab | What it shows |
 |---|---|
-| **Stats** | Word count with a length label (flash fiction → short story → novelette → novella → novel); characters with and without spaces; paragraphs and sentences; average sentence and paragraph length; reading and read-aloud time; share of dialogue; lexical variety (moving-average type/token ratio); readability (Flesch / Flesch–Kincaid for English, INFLESZ for Spanish); a **sentence-rhythm chart** (one bar per sentence); a per-note **word goal** with a progress bar; **words written today**; live counts for the **selected text**. |
+| **Stats** | Word count with a length label (flash fiction under 1,000 → short story → novelette from 7,500 → novella from 17,500 → novel from 40,000); characters with and without spaces; paragraphs and sentences; average sentence and paragraph length; reading and read-aloud time; share of dialogue; lexical variety (moving-average type/token ratio); readability (Flesch / Flesch–Kincaid for English, INFLESZ for Spanish); a **sentence-rhythm chart** (one bar per sentence); a per-note **word goal** with a progress bar; **words written today**; live counts for the **selected text**. |
 | **Outline** | Chapters (headings) and scenes (separated by `---`, `* * *`, `⁂` or `#`) with word counts. Tap to jump. Drag the ⠿ handle, or use the ⋯ menu, to **reorder chapters and scenes**. Each move is a single undo step. |
 | **Style** | Long sentences; **words repeated close together**; three or more sentences in a row that start with the same word; adverbs (‑ly / ‑mente); your **crutch words**; most-used words; **names and places**; longest paragraphs. Tap any item to highlight it in the text, and tap again to step to the next occurrence. |
 | **Check** | Spelling and grammar suggestions (see below). |
+| **Revise** | Changes since the last draft, the revision goal, drafts, and margin marks in the editor (see [Revision mode](#revision-mode)). |
 
 Headings, comments, callouts, code blocks and front matter are not counted, so the numbers reflect your prose.
 
@@ -58,10 +76,14 @@ Obsidian has no grammar checker of its own, and its spellcheck follows the opera
 
 Nothing is sent until you press **Check**, and the first check asks for permission. See [Network use and privacy](#network-use-and-privacy).
 
+
+→ More in the wiki: [Spelling and grammar](https://github.com/danielroa98/Authors-Toolbox/wiki/Spelling-and-grammar)
 ### Paragraph alignment
 
 Center, right-align, left-align or justify **only the selected paragraphs**: right-click → *Center*, or use the commands. Each paragraph gets an invisible marker (`%%center%%`), so the alignment holds in Live Preview, Reading view and PDF export. Running the same command again toggles it off.
 
+
+→ More in the wiki: [Paragraph alignment](https://github.com/danielroa98/Authors-Toolbox/wiki/Formatting-tools)
 ### Images in the text
 
 **Insert image…** lets you browse your vault's folders for an image (it opens in your attachments folder) or upload one from your device. You can set its width, alignment and an optional italic caption.
@@ -101,6 +123,8 @@ Notes with `type: script` are written in **[Fountain](https://fountain.io)**, th
 
 The spelling and grammar check skips character names, scene headings and transitions in scripts.
 
+
+→ More in the wiki: [Screenplay mode](https://github.com/danielroa98/Authors-Toolbox/wiki/Screenplays)
 ### Manuscript export (Word, PDF, EPUB, text)
 
 Turn a story, a poem or a whole project into submission-ready files: run *Export manuscript as a document or PDF…*, or choose **Export manuscript…** in the note's ⋯ menu or the file explorer. The export window shows a **live preview of every page** while you change the options, and the PDF is printed from exactly that layout.
@@ -115,6 +139,8 @@ Turn a story, a poem or a whole project into submission-ready files: run *Export
 - **What goes in:** the first `#` heading is the title and a heading right under it the subtitle (or your byline, which is dropped). Every line is a paragraph with a first-line indent. Italics and bold are kept, headings become section titles, scene-break lines become the chosen symbol, and the text ends with *FIN* / *END*. Callouts (concept art, author notes), comments, images, tables and code are left out. Centered and right-aligned paragraphs keep their alignment. Poems keep their lines, indentation and stanzas.
 - Files are saved in an `Exports` folder next to the note (or inside the exported folder). Everything is generated inside Obsidian, with no internet connection, on desktop, iPhone and iPad.
 
+
+→ More in the wiki: [Manuscript export (Word, PDF, EPUB, text)](https://github.com/danielroa98/Authors-Toolbox/wiki/Manuscript-export)
 ### Poetry mode
 
 Mark a note with `type: poem` (or `poema`, `poesía`), or add `poem` to its `cssclasses`, and it is treated as verse:
@@ -127,6 +153,8 @@ Mark a note with `type: poem` (or `poema`, `poesía`), or add `poem` to its `css
   - Tap a line to jump to it.
 - **Export:** single-spaced lines with their indentation, a blank line between stanzas, never justified.
 
+
+→ More in the wiki: [Poetry mode](https://github.com/danielroa98/Authors-Toolbox/wiki/Poetry)
 ### Writing habits
 
 Open **Writing habits** (ribbon flame icon or command) for a dashboard of how and what you write:
@@ -138,6 +166,8 @@ Open **Writing habits** (ribbon flame icon or command) for a dashboard of how an
 - **Forms and projects:** the same breakdown by form (story, poem, screenplay, article…, from `type`) and per project (from `anthology`), with progress towards a project's `word_goal`.
 - The breakdowns read the notes in your **writing folders** (a setting; by default the story folders and the scripts folder).
 
+
+→ More in the wiki: [Writing habits](https://github.com/danielroa98/Authors-Toolbox/wiki/Writing-habits)
 ### Revision mode
 
 Revising is not drafting: the word count may go down, and what matters is *what changed*. Revision mode keeps drafts of a note and shows the changes between any two versions.
@@ -154,9 +184,8 @@ Revising is not drafting: the word count may go down, and what matters is *what 
 - **Tracked changes for your editor:** *Export with tracked changes* writes a manuscript (.docx) in which the changes since a draft are real tracked changes that can be accepted or rejected in Word, Pages, Google Docs or LibreOffice.
 - Drafts are stored as one small file per note in `.authors-toolbox/drafts` in your vault (a setting). The dot keeps them out of search, the graph, Dataview and word counts; they sync with your vault and stay if you uninstall the plugin.
 
----`, `#`, `⁂`) become a centered `#`, and the story ends with *FIN* / *END*. Callouts (concept art, author notes), comments, images, tables and code are left out. Centered and right-aligned paragraphs keep their alignment; justified ones are justified in the contest layout.
-- Files are saved in an `Exports` folder next to the note. Everything is generated inside Obsidian, with no internet connection, on desktop, iPhone and iPad.
 
+→ More in the wiki: [Revision mode](https://github.com/danielroa98/Authors-Toolbox/wiki/Revision-mode)
 ---
 
 ## Commands
@@ -301,7 +330,6 @@ The first part of poetry mode is in (layout, syllables, rhyme scheme, form, expo
 
 ### Small improvements
 - Dialogue-dash conversion for pasted text without running a command.
-- Configurable scene-break symbols.
 - Keyboard shortcuts for moving sections up and down in the outline.
 
 ## Known limitations
@@ -311,6 +339,7 @@ The first part of poetry mode is in (layout, syllables, rhyme scheme, form, expo
 - Statistics and style insights support English and Spanish; other languages fall back to English rules.
 - Obsidian's own spellcheck still runs alongside. On iPhone and iPad it follows the keyboard language.
 - Syllable counts and rhyme are estimates: poets bend the rules (*sinéresis*, *diéresis*, licences), and English has no stress analysis yet.
+- Drafts are kept in a hidden folder of the vault (`.authors-toolbox/drafts`). iCloud, Dropbox and Git sync it; Obsidian Sync may skip hidden folders, in which case choose a visible drafts folder in the settings.
 - Exported PDFs use the PDF standard fonts (Times, Helvetica for Arial, Courier), which cover Spanish and Western European characters; other scripts print as "?". Word files use the real fonts.
 
 ---
@@ -391,15 +420,19 @@ tests/
 └── support/                 # Obsidian mock, test helpers, bundle entry
 ```
 
+### Wiki
+
+The wiki's pages and images live in [`docs/wiki/`](docs/wiki) and are published to the GitHub wiki with `scripts/publish-wiki.sh`. The screenshots are rendered from the plugin's own code with the sample notes, never from a real vault.
+
 ### Releasing
 
 1. Update `version` in `manifest.json` and `package.json`, and add the version to `versions.json`.
 2. Commit, then tag with the same version and push the tag:
    ```bash
-   git tag -a 1.4.1 -m "1.4.1"
-   git push origin 1.4.1
+   git tag -a 1.9.0 -m "1.9.0"
+   git push origin 1.9.0
    ```
-3. The GitHub Action builds the plugin and creates a **draft release** with `main.js`, `manifest.json` and `styles.css` and a build-provenance attestation. Review it and publish.
+3. The GitHub Action checks that the tag matches `manifest.json`, runs lint and the tests, builds the plugin and creates a **draft release** with `main.js`, `manifest.json` and `styles.css` and a build-provenance attestation. Review it and publish.
 
 See [CHANGELOG.md](CHANGELOG.md) for the version history.
 

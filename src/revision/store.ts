@@ -116,6 +116,7 @@ export class DraftStore {
     if (opts.note) d.note = opts.note;
     if (opts.auto) d.auto = true;
     df.drafts.push(d);
+    df.drafts.sort((x, y) => x.created - y.created);
     await this.save(df);
     return d;
   }
