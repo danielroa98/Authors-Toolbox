@@ -201,6 +201,8 @@ Everything else runs entirely on your device: statistics, style insights, outlin
 
 Ideas under consideration, roughly in order of priority. Nothing here is promised; suggestions are welcome in the issues.
 
+Recently done: the TypeScript rewrite and searchable settings (1.5.1), dialogue detection on every line (1.5.2), and manuscript export to Word and PDF with a live preview (1.6).
+
 ### Poetry mode (next)
 
 Prose formatting gets in the way of poetry. Markdown merges lines, eats indentation and justifies text. The plan is a dedicated mode for notes with `type: poem`:
@@ -221,14 +223,19 @@ Prose formatting gets in the way of poetry. Markdown merges lines, eats indentat
 - **Export:** PDF and Markdown that keep the exact layout.
 
 ### Writing and manuscripts
-- **Compile a manuscript** from several notes (chapters of a novel) into one document, with a word count for the whole book.
-- **Export a whole project** (a folder of chapter notes, in order) as one manuscript, and EPUB for novellas and collections.
+- **Export a whole project:** compile a folder of chapter notes, in order, into one Word or PDF manuscript, with a word count for the whole book.
+- **"Keep justified paragraphs" option** in the export window, so `%%justify%%` text stays justified in the standard manuscript layout too (today only the contest layout keeps it).
+- **EPUB export** for novellas and collections, built on the same manuscript model.
+- **Plain-text copy** of a story without hidden markers, comments or callouts, for submission forms that ask you to paste the text.
+- **More export layouts:** a choice of scene-break symbol, an optional cover page, and per-contest presets (font, spacing and page size saved under a name).
+- **Count each line as a paragraph** (optional), matching how lines read in Obsidian, for the paragraph count, words per paragraph and longest paragraphs.
 - **Writing sprints:** a timer with a word target and a session summary.
 - **Per-project goals and history:** words per day, streaks, a progress chart.
 - **Revision mode:** compare two drafts, with word count differences per chapter.
 
 ### Screenplays
-- **Exact pagination** and a screenplay-ready **PDF export** (Courier 12 pt, margins, `(MORE)`/`(CONT'D)` across pages, scene numbers).
+- **Exact pagination** and a screenplay-ready **PDF export** (Courier 12 pt, standard margins, title page, `(MORE)`/`(CONT'D)` across pages, scene numbers), reusing the PDF engine and live preview of the manuscript export.
+- **Final Draft (`.fdx`) export**, generated from the same element detection as the screenplay layout.
 - **Dual dialogue** shown side by side.
 - **Title page** rendering inside Obsidian.
 - **Production helpers:** scene numbering locks, revision colours, a character and location report.
@@ -238,7 +245,6 @@ Prose formatting gets in the way of poetry. Markdown merges lines, eats indentat
 - **More languages** for statistics and checks (Portuguese and French first).
 - **Spanish-language interface.**
 - **Automatic checking** of the current paragraph after a pause, with the same consent and limits.
-- **Settings search** support (Obsidian 1.13+ setting definitions).
 
 ### Small improvements
 - Dialogue-dash conversion for pasted text without running a command.
