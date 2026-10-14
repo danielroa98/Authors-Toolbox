@@ -14,3 +14,8 @@ export { buildText } from "../../src/export/text";
 export * as habitsLog from "../../src/habits/log";
 export * as genres from "../../src/habits/genres";
 export { HabitsView } from "../../src/habits/view";
+export * as revDiff from "../../src/revision/diff";
+export * as revStore from "../../src/revision/store";
+export { trackedManuscript } from "../../src/revision/tracked";
+export { RevisionView } from "../../src/revision/view";
+export { renderRevise } from "../../src/revision/panel";

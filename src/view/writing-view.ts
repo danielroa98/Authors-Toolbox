@@ -3,6 +3,8 @@ import type { PoemAnalysis } from "../poetry/metrics";
 import { renderPoem } from "../poetry/panel";
 import { CheckScope, ToolboxPrefs, VIEW_WRITING } from "../constants";
 import { DocRange, issueRange } from "../editor/issues";
+import { renderRevise } from "../revision/panel";
+import type { Revision } from "../revision/controller";
 import { renderCast, renderNotes, renderScenes, renderScriptStats, type ScriptPanelState } from "../screenplay/panel";
 import { Analysis, Outline, OutlineNode, Para, Scene, Sentence, WordToken, lengthCategory } from "../text/analysis";
 import { IssueKind, KIND_LABEL, LANGS, fmtMin, fmtN } from "./helpers";
@@ -26,6 +28,7 @@ export interface PluginState extends Omit<ScriptPanelState, "script" | "sOutline
 }
 
 export interface WritingViewPlugin {
+  revision: Revision;
   state: PluginState | null;
   prefs: ToolboxPrefs;
   check: {
@@ -132,10 +135,10 @@ export class WritingView extends ItemView {
     const tabs = head.createDiv({ cls: "at-tabs" });
     const isSp = !!st.script;
     const T: [string, string, string][] = isSp
-      ? [["sp-stats", "clapperboard", "Script"], ["sp-scenes", "list-video", "Scenes"], ["sp-cast", "users", "Cast"], ["sp-notes", "lightbulb", "Notes"], ["check", "spell-check", "Check"]]
+      ? [["sp-stats", "clapperboard", "Script"], ["sp-scenes", "list-video", "Scenes"], ["sp-cast", "users", "Cast"], ["sp-notes", "lightbulb", "Notes"], ["check", "spell-check", "Check"], ["revise", "git-compare", "Revise"]]
       : st.poem
-        ? [["poem", "feather", "Poem"], ["overview", "bar-chart-2", "Stats"], ["style", "sparkles", "Style"], ["check", "spell-check", "Check"]]
-        : [["overview", "bar-chart-2", "Stats"], ["outline", "list-tree", "Outline"], ["style", "sparkles", "Style"], ["check", "spell-check", "Check"]];
+        ? [["poem", "feather", "Poem"], ["overview", "bar-chart-2", "Stats"], ["style", "sparkles", "Style"], ["check", "spell-check", "Check"], ["revise", "git-compare", "Revise"]]
+        : [["overview", "bar-chart-2", "Stats"], ["outline", "list-tree", "Outline"], ["style", "sparkles", "Style"], ["check", "spell-check", "Check"], ["revise", "git-compare", "Revise"]];
     const tabKey = isSp ? "panelTabScript" : "panelTab";
     let cur = String(this.plugin.prefs[tabKey] || "");
     if (!T.some((x) => x[0] === cur)) cur = T[0][0];
@@ -166,6 +169,7 @@ export class WritingView extends ItemView {
       else if (spSt && cur === "sp-cast") renderCast(this, body, spSt);
       else if (spSt && cur === "sp-notes") renderNotes(this, body, spSt);
       else if (st.poem && cur === "poem") renderPoem(body, st.poem, this.plugin);
+      else if (cur === "revise") renderRevise(body, this.plugin, st);
       else if (cur === "outline") this.renderOutline(body, st);
       else if (cur === "style") this.renderStyle(body, st);
       else if (cur === "check") this.renderCheck(body, st);

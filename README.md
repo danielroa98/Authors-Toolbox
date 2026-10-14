@@ -18,6 +18,7 @@ It works on **macOS, Windows, Linux, iPhone and iPad** and requires Obsidian 1.7
   - [Manuscript export (Word, PDF, EPUB, text)](#manuscript-export-word-pdf-epub-text)
   - [Poetry mode](#poetry-mode)
   - [Writing habits](#writing-habits)
+  - [Revision mode](#revision-mode)
 - [Commands](#commands)
 - [Note properties](#note-properties)
 - [Settings](#settings)
@@ -137,6 +138,22 @@ Open **Writing habits** (ribbon flame icon or command) for a dashboard of how an
 - **Forms and projects:** the same breakdown by form (story, poem, screenplay, article…, from `type`) and per project (from `anthology`), with progress towards a project's `word_goal`.
 - The breakdowns read the notes in your **writing folders** (a setting; by default the story folders and the scripts folder).
 
+### Revision mode
+
+Revising is not drafting: the word count may go down, and what matters is *what changed*. Revision mode keeps drafts of a note and shows the changes between any two versions.
+
+- **Drafts:** *Save a draft of this note…* (command, the **Revise** tab or the note's ⋯ menu) keeps a named copy, with an optional note ("sent to the workshop"). A draft is also kept **automatically** the first time you open a writing note each day, if it changed since the last one, so you can always see what you changed today. Automatic drafts are kept for 30 days (a setting); named ones until you delete them.
+- **Compare** (*Compare drafts of this note*) opens the revision page. Pick two versions (a draft and the note now, or two drafts) and see:
+  - **Summary:** words before and after, words added and cut, how much of the text changed, and how many paragraphs were rewritten, added, cut or moved.
+  - **Chapters and sections:** words before and after for each heading, with what was added and cut, and whether the section is new, cut, revised, renamed or moved.
+  - **Style:** sentences, average sentence length, long sentences, readability, dialogue, adverbs and crutch words per 1,000 words, and vocabulary variety, before → after.
+  - **The text** with additions, cuts and moved paragraphs marked word by word. *Changes only* hides untouched paragraphs. Tap a paragraph to open it in the note; **Restore** puts a cut paragraph back, **Undo changes** brings back a paragraph's earlier wording.
+  - **Drafts:** the history of the note with words and change from the previous draft. Compare, rename, restore a whole draft (the current text is saved first and the note keeps its properties), copy it to a new note, or delete it.
+- **Revision goal:** *cut 10%* or *reach 5,000 words*, measured from a draft, with a progress bar on the revision page and in the Revise tab.
+- **Changes in the editor:** *Show changes in the editor* marks new lines (green), rewritten lines (orange) and where text was cut (red) in the margin, updated as you type.
+- **Tracked changes for your editor:** *Export with tracked changes* writes a manuscript (.docx) in which the changes since a draft are real tracked changes that can be accepted or rejected in Word, Pages, Google Docs or LibreOffice.
+- Drafts are stored as one small file per note in `.authors-toolbox/drafts` in your vault (a setting). The dot keeps them out of search, the graph, Dataview and word counts; they sync with your vault and stay if you uninstall the plugin.
+
 ---`, `#`, `⁂`) become a centered `#`, and the story ends with *FIN* / *END*. Callouts (concept art, author notes), comments, images, tables and code are left out. Centered and right-aligned paragraphs keep their alignment; justified ones are justified in the contest layout.
 - Files are saved in an `Exports` folder next to the note. Everything is generated inside Obsidian, with no internet connection, on desktop, iPhone and iPad.
 
@@ -157,6 +174,10 @@ Open **Writing habits** (ribbon flame icon or command) for a dashboard of how an
 | Export folder as one manuscript… | right-click a folder in the file explorer |
 | Open writing habits / Start a writing sprint… / Stop the writing sprint | |
 | Set genre of this note… | |
+| Save a draft of this note… / Compare drafts of this note | also in the note's ⋯ menu |
+| Show or hide changes since the last draft in the editor | |
+| Export the changes since the last draft with tracked changes (.docx) | |
+| Set a revision goal for this note… | |
 | Screenplay: new script… / adapt this story into a script / export as .fountain | |
 | Screenplay: format line as Scene heading / Action / Character / Parenthetical / Transition / Centered | also in the right-click menu in scripts |
 | Screenplay: insert page break | |
@@ -197,6 +218,9 @@ On iPhone and iPad, add the commands you use most to the mobile toolbar (**Setti
 - **Writing habits:**
   - Daily word goal and writing folders.
   - Default sprint length and word target.
+- **Revision:**
+  - Keep a daily draft automatically, and for how many days.
+  - Drafts folder.
 - **Manuscript export:**
   - Default layout.
   - Font, line spacing and page size.
@@ -224,7 +248,7 @@ Authors Toolbox uses the network **only for the spelling and grammar check, and 
 
 The free LanguageTool service is limited to about 20 KB per request and 75 KB per minute. Authors Toolbox splits long notes and waits between parts when needed. **LanguageTool Premium** (a paid LanguageTool service) is optional.
 
-Everything else runs entirely on your device: statistics, style insights, outline, alignment and screenplay layout. The plugin stores its settings and a small daily word count in its own `data.json` inside your vault. It includes no telemetry and no ads.
+Everything else runs entirely on your device: statistics, style insights, outline, alignment and screenplay layout. The plugin stores its settings and a small daily word count in its own `data.json` inside your vault, and drafts in `.authors-toolbox/drafts`. It includes no telemetry and no ads.
 
 ## Installation
 
@@ -243,10 +267,10 @@ Everything else runs entirely on your device: statistics, style insights, outlin
 
 Ideas under consideration, roughly in order of priority. Nothing here is promised; suggestions are welcome in the issues.
 
-Recently done: the TypeScript rewrite and searchable settings (1.5.1), dialogue detection on every line (1.5.2), manuscript export with a live preview (1.6), EPUB, plain text, project export, presets and the first part of poetry mode (1.7), and writing habits with sprints, streaks and genre tracking (1.8). The step-by-step plan is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+Recently done: the TypeScript rewrite and searchable settings (1.5.1), dialogue detection on every line (1.5.2), manuscript export with a live preview (1.6), EPUB, plain text, project export, presets and the first part of poetry mode (1.7), writing habits with sprints, streaks and genre tracking (1.8), and revision mode with drafts, comparisons and tracked changes (1.9). The step-by-step plan is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
 
 ### Writing habits: next steps
-- **Revision mode:** save a draft snapshot and compare the note with it, with words added and removed per chapter.
+- **Words revised per day** in the habits dashboard, so revision days count too; recovering a deleted note from its drafts.
 - **Calendar heatmap** of writing days, weekly or monthly goals, and a goal per genre.
 
 ### Writing and manuscripts
@@ -348,12 +372,21 @@ src/
 │   ├── sprint.ts            # sprint timing, start and summary windows
 │   ├── genre-modal.ts       # genre picker
 │   └── view.ts              # writing-habits dashboard
+├── revision/
+│   ├── diff.ts              # comparing two versions: paragraphs, words, moves, sections, editor marks
+│   ├── store.ts             # drafts, one JSON file per note in the drafts folder
+│   ├── controller.ts        # saving, restoring, checkpoints, editor marks, tracked-changes export
+│   ├── tracked.ts           # manuscript with tracked changes (for the Word writer)
+│   ├── view.ts              # revision page
+│   ├── panel.ts             # Revise tab of the writing panel
+│   ├── editor.ts            # change marks in the editor margin
+│   └── modals.ts            # draft, goal and confirmation windows
 └── modals/
     ├── export-manuscript.ts # export window with live page preview
     ├── insert-image.ts
     └── prompts.ts
 tests/
-├── *.test.cjs               # one file per area: plugin, screenplay, poetry, export, habits, analysis
+├── *.test.cjs               # one file per area: plugin, screenplay, poetry, export, habits, revision, analysis
 ├── fixtures/                # sample notes
 └── support/                 # Obsidian mock, test helpers, bundle entry
 ```

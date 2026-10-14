@@ -6,18 +6,24 @@ import { HEADING_RE, LIST_RE, SCENE_RE, HR_RE, bodyStart, words } from "../text/
    Pure functions; the Word and PDF writers both render this model.
    ====================================================================== */
 
-export interface Run { text: string; b?: boolean; i?: boolean }
+export interface Run {
+  text: string; b?: boolean; i?: boolean;
+  /** Tracked changes (Word export of a revision): text added or cut since a draft. */
+  ins?: boolean; del?: boolean;
+}
+/** A whole block added or cut since a draft (tracked changes). */
+export type Change = "ins" | "del";
 export type Align = "left" | "center" | "right" | "justify";
 
 export type Block =
-  | { kind: "para"; runs: Run[]; align: Align; quote?: boolean }
+  | { kind: "para"; runs: Run[]; align: Align; quote?: boolean; change?: Change }
   /** `chapter`: a note's title inside a compiled project (always starts a new page). */
-  | { kind: "heading"; level: number; runs: Run[]; align: Align; chapter?: boolean }
-  | { kind: "break" }
+  | { kind: "heading"; level: number; runs: Run[]; align: Align; chapter?: boolean; change?: Change }
+  | { kind: "break"; change?: Change }
   /** A line of verse; `indent` = leading spaces as written. */
-  | { kind: "verse"; runs: Run[]; align: Align; indent: number }
+  | { kind: "verse"; runs: Run[]; align: Align; indent: number; change?: Change }
   /** The gap between two stanzas. */
-  | { kind: "stanza" };
+  | { kind: "stanza"; change?: Change };
 
 export interface Manuscript {
   title: string;
@@ -51,6 +57,8 @@ export interface ExportOptions {
   /** Title page on its own; the text starts on page 2. */
   coverPage: boolean;
   lang: "es" | "en";
+  /** Word export only: write `ins`/`del` runs as tracked changes by this author at this date (ISO). */
+  track?: { author: string; date: string };
 }
 
 export type SceneBreak = "#" | "* * *" | "—" | "blank";

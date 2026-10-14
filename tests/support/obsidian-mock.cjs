@@ -53,7 +53,10 @@ class Plugin {
   registerEvent() {} registerEditorExtension(x) { this.app.extensions = (this.app.extensions || []).concat(x); }
   registerMarkdownPostProcessor(f) { (this.pps = this.pps || []).push(f); } registerEditorSuggest(s) { this.suggest = s; } addSettingTab(t) { this.tab = t; }
 }
-class ItemView { constructor(leaf) { this.leaf = leaf; this.app = leaf.app; this.contentEl = document.createElement("div"); document.body.appendChild(this.contentEl); } }
+class ItemView {
+  constructor(leaf) { this.leaf = leaf; this.app = leaf.app; this.contentEl = document.createElement("div"); document.body.appendChild(this.contentEl); }
+  getState() { return {}; } async setState() {}
+}
 class Modal { constructor(app) { this.app = app; this.titleEl = document.createElement("div"); this.modalEl = document.createElement("div"); this.contentEl = document.createElement("div"); } open() { Modal.last = this; this.onOpen(); } close() { this.onClose && this.onClose(); } }
 class MenuItem { constructor() { this.t = ""; } setTitle(t) { this.t = t; return this; } setIcon() { return this; } setSection() { return this; } setDisabled(d) { this.d = d; return this; } onClick(f) { this.f = f; return this; } }
 class Menu { constructor() { this.items = []; Menu.last = this; } addItem(cb) { const i = new MenuItem(); cb(i); this.items.push(i); return this; } addSeparator() { return this; } showAtMouseEvent() {} showAtPosition() {} }
@@ -132,7 +135,16 @@ function makeApp() {
   app.files = files;
   app.vault = { on() {}, getFiles: () => [], read: async (f) => files[f.path],
     getAbstractFileByPath: (p) => (p in files ? { path: p } : null), process: async (f, fn) => { files[f.path] = fn(files[f.path]); },
-    adapter: { exists: async (p) => p in files || Object.keys(files).some((k) => k.startsWith(p + "/")), write: async (p, t) => { files[p] = t; } },
+    modify: async (f, t) => { files[f.path] = t; },
+    createBinary: async (p, b) => { files[p] = new Uint8Array(b); return { path: p }; },
+    modifyBinary: async (f, b) => { files[f.path] = new Uint8Array(b); },
+    adapter: {
+      exists: async (p) => p in files || Object.keys(files).some((k) => k.startsWith(p + "/")),
+      read: async (p) => { if (!(p in files)) throw new Error("no file " + p); return files[p]; },
+      write: async (p, t) => { files[p] = t; },
+      mkdir: async (p) => { files[p + "/.keep"] = ""; },
+      remove: async (p) => { delete files[p]; },
+    },
     createFolder: async (p) => { files[p + "/.keep"] = ""; },
     create: async (p, t) => { files[p] = t; return { path: p, basename: p.split("/").pop().replace(/\.md$/, ""), parent: { path: p.slice(0, p.lastIndexOf("/")) } }; } };
   app.workspace.getLeaf = () => ({ openFile: async (f) => { app.opened = f; } });

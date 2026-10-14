@@ -1,4 +1,4 @@
-# Implementation plan: manuscripts and poetry
+# Implementation plan: manuscripts, poetry, habits and revision
 
 How the "Writing and manuscripts" items of the roadmap and poetry mode are built. Each phase ships on its own,
 keeps the plugin working on desktop, iPhone and iPad, and adds no runtime dependencies or network use.
@@ -64,7 +64,7 @@ story note(s) ──► manuscript model ──► page layout ──► PDF wri
 | **Poem tab** | `poetry/panel.ts` | Lines, stanzas, words, form; each line with its syllable count and rhyme letter; tap a line to jump to it. |
 | **Poem-aware export** | `export/manuscript.ts` (`verse` blocks), all writers | Lines kept as written, indentation preserved, single-spaced within stanzas, a blank line between stanzas, never justified. |
 
-## Phase 5 — Writing habits 🚧 (1.8.0: all but revision mode)
+## Phase 5 — Writing habits ✅ (1.8.0; revision mode 1.9.0)
 
 | Item | Where | Done when |
 |---|---|---|
@@ -74,7 +74,34 @@ story note(s) ──► manuscript model ──► page layout ──► PDF wri
 | **Writing habits dashboard** ✅ | `habits/view.ts` | Words per day for the last 30 / 90 / 365 days with the goal line; totals for today, this week, this month; sprint statistics. |
 | **Genres** ✅ | `habits/genres.ts`; dashboard; *Set genre of this note…* | Each work's `genre` property (one or several). The dashboard shows where your words go by genre (words written in the period) and how many works and words you have per genre, names the genre you write most, and lists untagged works so they can be tagged in place. |
 | **Forms and projects** ✅ | dashboard | The same breakdown by form (story, poem, screenplay, article…) and per project (anthology): works, total words, `word_goal` progress, recent words. |
-| **Revision mode** ⏳ | next | Save a draft snapshot and compare the note with it: words added and removed per chapter, changed paragraphs. |
+| **Revision mode** ✅ | `revision/*` | See Phase 5b. |
+
+## Phase 5b — Revision mode ✅ (1.9.0)
+
+Revising is a different kind of work from drafting: the word count may go down, and the question is *what changed*,
+not *how much was written*. Revision mode keeps drafts of a note and shows the changes between any two of them.
+
+```
+note text ──► draft store (revision/store.ts) ──► compare (revision/diff.ts) ──► revision view, panel tab, editor marks
+                                                          └──► tracked changes (revision/tracked.ts ► export/docx.ts)
+```
+
+| Item | Where | Done when |
+|---|---|---|
+| **Drafts** | `revision/store.ts`; *Save a draft of this note…* | A named copy of the note at a moment in time, with an optional note ("before the editor's comments"). Kept as one JSON file per note in a hidden folder of the vault (`.authors-toolbox/drafts`, a setting), so drafts never show up in search, the graph, Dataview queries or word counts, sync with the vault, and survive uninstalling the plugin. Renaming a note keeps its drafts. |
+| **Daily checkpoint** | `main.ts` (`autoCheckpoint`) | The first time a writing note is opened each day, its text is kept as an automatic draft, if it changed since the last one. Automatic drafts are kept for a number of days (a setting); named drafts are kept until deleted. |
+| **Comparison engine** | `revision/diff.ts` (pure) | Paragraph alignment (Myers diff on lines), pairing of rewritten paragraphs by similarity, word-level changes inside them, moved paragraphs, words added / cut / moved, share of the text rewritten. Fast enough for a novel (common ends trimmed, bounded search). |
+| **Per chapter** | `revision/diff.ts` (`sections`) | Each heading is a section: words before and after, added and cut, and whether it is new, cut, rewritten, moved or untouched. |
+| **Style changes** | revision view | Before → after for words, sentences, average sentence length, readability, dialogue, adverbs and crutch words per 1,000 words, long sentences and vocabulary variety. |
+| **Revision view** | `revision/view.ts` | Pick any two versions (a draft and the current note, or two drafts). Summary, revision goal, chapters, style, then the text with additions, cuts and moves marked; *Changes only* hides untouched paragraphs. Tapping a paragraph opens it in the note. |
+| **Undo a change** | revision view | Each cut or rewritten paragraph has *Restore*: puts the draft's version back in the note (only if the note still has the expected text there). |
+| **Draft history** | revision view | Timeline of drafts with words and change from the previous one; compare, rename, add a note, copy to a new note, restore the whole draft (the current text is saved as a draft first, properties are kept), delete. |
+| **Revision goal** | revision view; panel | "Cut 10%" or "reach 5,000 words", measured from a draft; progress bar in the revision view and the panel. |
+| **Revise tab** | `revision/panel.ts` | In the writing panel: last draft, changes since it, goal progress, *Save draft*, *Compare*, *Show changes in the editor*, recent drafts. |
+| **Changes in the editor** | `revision/editor.ts` | Optional marks in the margin of the editor: new lines, rewritten lines, and where text was cut, against the last draft (or the one being compared). Updated as you type. |
+| **Tracked changes for editors** | `revision/tracked.ts`; `export/docx.ts` | Export a Word file in manuscript format where the changes since a draft are real Word revisions (insertions and deletions, author and date) that an editor can accept or reject. |
+
+Later: words revised per day in the habits dashboard; recovering a deleted note from its drafts.
 
 ## Phase 6 — Poetry, next ⏳
 
@@ -88,8 +115,10 @@ story note(s) ──► manuscript model ──► page layout ──► PDF wri
 
 ## Testing approach
 
-- Pure modules (`export/*`, `poetry/metrics.ts`, `text/analysis.ts`) are tested in Node against real notes.
+- Pure modules (`export/*`, `poetry/metrics.ts`, `text/analysis.ts`, `revision/diff.ts`) are tested in Node against sample notes.
 - Every writer's output is checked by rendering it: PDFs with `pdftoppm`, Word files and EPUBs converted with
   LibreOffice / unpacked and validated, and the preview drawn in a headless browser.
 - Contest exports are scanned to make sure the author's name never appears (text, file properties, metadata).
 - `npm run lint` (the directory's own rules) and `npm run typecheck` must stay at zero warnings.
+- `npm test` runs the behaviour tests in `tests/` (Node's test runner, Obsidian mocked, real CodeMirror and DOM)
+  on every push, pull request and release.

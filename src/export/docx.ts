@@ -12,12 +12,20 @@ const MARGIN = 1440, INDENT = 720;
 
 const xml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+/** Tracked-changes author and date for the document being built, and the next revision id. */
+let track: { author: string; date: string } | null = null;
+let revId = 0;
+const revAttrs = (): string => `w:id="${++revId}" w:author="${xml(track?.author ?? "")}" w:date="${xml(track?.date ?? "")}"`;
+
 function run(r: Run): string {
   const pr = (r.b ? "<w:b/>" : "") + (r.i ? "<w:i/>" : "");
-  return `<w:r>${pr ? `<w:rPr>${pr}</w:rPr>` : ""}<w:t xml:space="preserve">${xml(r.text)}</w:t></w:r>`;
+  const rpr = pr ? `<w:rPr>${pr}</w:rPr>` : "";
+  if (track && r.del) return `<w:del ${revAttrs()}><w:r>${rpr}<w:delText xml:space="preserve">${xml(r.text)}</w:delText></w:r></w:del>`;
+  const plain = `<w:r>${rpr}<w:t xml:space="preserve">${xml(r.text)}</w:t></w:r>`;
+  return track && r.ins ? `<w:ins ${revAttrs()}>${plain}</w:ins>` : plain;
 }
 
-interface ParaProps { align?: "left" | "center" | "right" | "both"; firstLine?: number; hanging?: number; left?: number; single?: boolean; before?: number; pageBreak?: boolean; keepNext?: boolean; tabRight?: number }
+interface ParaProps { align?: "left" | "center" | "right" | "both"; firstLine?: number; hanging?: number; left?: number; single?: boolean; before?: number; pageBreak?: boolean; keepNext?: boolean; tabRight?: number; change?: "ins" | "del" }
 
 function para(content: string, p: ParaProps = {}): string {
   const ppr = [
@@ -28,6 +36,8 @@ function para(content: string, p: ParaProps = {}): string {
     p.hanging ? `<w:ind w:left="${p.left ?? 0}" w:hanging="${p.hanging}"/>`
       : p.firstLine !== undefined || p.left ? `<w:ind${p.left ? ` w:left="${p.left}"` : ""} w:firstLine="${p.firstLine ?? 0}"/>` : "",
     p.align && p.align !== "left" ? `<w:jc w:val="${p.align}"/>` : "",
+    // a paragraph added or cut as a whole: its paragraph mark is a tracked change too
+    track && p.change ? `<w:rPr><w:${p.change} ${revAttrs()}/></w:rPr>` : "",
   ].join("");
   return `<w:p>${ppr ? `<w:pPr>${ppr}</w:pPr>` : ""}${content}</w:p>`;
 }
@@ -44,14 +54,15 @@ function bodyXml(ms: Manuscript, o: ExportOptions): string {
   let first = true;
   for (const b of ms.blocks) {
     switch (b.kind) {
-      case "break": out.push(para(text(breakText(o)), { align: "center", firstLine: 0, before: poem ? 180 : undefined })); break;
-      case "stanza": out.push(para("", { firstLine: 0, single: true })); break;
+      case "break": out.push(para(run({ text: breakText(o), ins: b.change === "ins", del: b.change === "del" }), { align: "center", firstLine: 0, before: poem ? 180 : undefined, change: b.change })); break;
+      case "stanza": out.push(para("", { firstLine: 0, single: true, change: b.change })); break;
       case "heading": {
         const align = b.align === "justify" ? "center" : b.align;
         out.push(para(b.runs.map((r) => run({ ...r, b: true })).join(""), {
           align, firstLine: 0, keepNext: true,
           before: b.chapter && !first ? 480 : undefined,
           pageBreak: !first && (b.chapter || (o.chapterBreaks && b.level === topLevel)),
+          change: b.change,
         }));
         if (b.chapter) out.push(para("", { firstLine: 0, single: true }));
         break;
@@ -60,13 +71,13 @@ function bodyXml(ms: Manuscript, o: ExportOptions): string {
         // a written space of indentation ≈ half an em (120 twips at 12 pt); wrapped lines hang under the line
         const left = b.indent * 120 + 480;
         const align = b.align === "center" || b.align === "right" ? b.align : "left";
-        out.push(para(b.runs.map(run).join(""), { align, left, hanging: 480, single: true }));
+        out.push(para(b.runs.map(run).join(""), { align, left, hanging: 480, single: true, change: b.change }));
         break;
       }
       case "para": {
         const justify = b.align === "justify" && justifies(o);
         const align = b.align === "center" || b.align === "right" ? b.align : justify ? "both" : "left";
-        out.push(para(b.runs.map(run).join(""), b.quote ? { left: INDENT, firstLine: 0, align } : { align, firstLine: align === "center" || align === "right" ? 0 : INDENT }));
+        out.push(para(b.runs.map(run).join(""), b.quote ? { left: INDENT, firstLine: 0, align, change: b.change } : { align, firstLine: align === "center" || align === "right" ? 0 : INDENT, change: b.change }));
         break;
       }
     }
@@ -89,6 +100,11 @@ function titleBlock(ms: Manuscript, o: ExportOptions, before: number): string {
 const PAGE_BREAK = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
 
 export function buildDocx(ms: Manuscript, o: ExportOptions): Uint8Array {
+  track = o.track ?? null; revId = 0;
+  try { return docxParts(ms, o); } finally { track = null; }
+}
+
+function docxParts(ms: Manuscript, o: ExportOptions): Uint8Array {
   const L = labels(o.lang);
   const page = PAGE[o.page];
   const textWidth = page.w - 2 * MARGIN;
@@ -133,7 +149,7 @@ export function buildDocx(ms: Manuscript, o: ExportOptions): Uint8Array {
 </w:styles>`;
 
   const settings = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:defaultTabStop w:val="720"/><w:characterSpacingControl w:val="doNotCompress"/></w:settings>`;
+<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">${track ? "<w:trackRevisions/>" : ""}<w:defaultTabStop w:val="720"/><w:characterSpacingControl w:val="doNotCompress"/></w:settings>`;
 
   const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">

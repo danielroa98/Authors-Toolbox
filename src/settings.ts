@@ -11,6 +11,8 @@ export interface SettingsPlugin {
   prefs: ToolboxPrefs;
   saveSettings(): Promise<void>;
   refreshSoon(): void;
+  /** Called after a setting is stored. */
+  settingChanged?(key: string): void;
 }
 
 /* ======================================================================
@@ -74,6 +76,14 @@ const GROUPS: Group[] = [
       { key: "writingFolders", kind: "textarea", name: "Writing folders", desc: "Folders with your works, one per line, for the genre, form and project breakdowns. Empty: the story folders and the scripts folder." },
       { key: "sprintMinutes", kind: "number", name: "Default sprint length (minutes)", fallback: 25 },
       { key: "sprintTarget", kind: "number", name: "Default sprint word target", desc: "Leave at zero for no target.", allowZero: true },
+    ],
+  },
+  {
+    heading: "Revision",
+    fields: [
+      { key: "autoDrafts", kind: "toggle", name: "Keep a daily draft automatically", desc: "The first time you open a note in your writing folders each day, its text is kept as a draft if it changed since the last one, so you can always see what you changed today or go back." },
+      { key: "autoDraftDays", kind: "number", name: "Keep automatic drafts for (days)", desc: "Named drafts are kept until you delete them.", fallback: 30 },
+      { key: "draftsFolder", kind: "text", name: "Drafts folder", desc: "Where drafts are stored in your vault, one file per note. Folders starting with a dot are hidden from Obsidian (search, graph, Dataview) but sync with the vault.", fallback: DEFAULTS.draftsFolder },
     ],
   },
   {
@@ -146,6 +156,7 @@ export class ToolboxSettings extends PluginSettingTab {
     }
     this.prefs[f.key] = v;
     await this.plugin.saveSettings();
+    this.plugin.settingChanged?.(f.key);
     this.plugin.refreshSoon();
   }
 

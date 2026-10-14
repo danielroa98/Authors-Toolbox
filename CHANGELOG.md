@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.9.0 — 2026-10-14
+- **Revision mode:**
+  - **Drafts** of a note: save a named draft with a note, or let the plugin keep one automatically the first time you open a writing note each day.
+  - **Compare** any two versions: words added and cut, rewritten, new, cut and moved paragraphs, a chapter-by-chapter table, and style before → after.
+  - The text with changes marked word by word. **Restore** a cut paragraph or **undo** a rewrite in one tap.
+  - **Draft history:** rename, restore a whole draft (keeping the note's properties), copy to a new note, delete.
+  - **Revision goals** ("cut 10%", "reach 5,000 words").
+  - **Changes in the editor:** margin marks for new, rewritten and cut lines.
+  - **Word file with tracked changes** for your editor.
+  - New **Revise** tab in the writing panel.
+- **Manuscript export:** a story that opens with a section heading (`## Enero`) no longer turns it into the subtitle.
+- Behaviour tests now live in the repository (`npm test`) and run on every push and release.
+
 ## 1.8.0 — 2026-10-14
 - **Writing habits dashboard** (ribbon flame icon or *Open writing habits*): words per day for 30, 90 or 365 days with a daily goal line, totals for today, the week and the month, writing days, and current and best streaks.
 - **Genre tracking:** a `genre` property on each work (or *Set genre of this note…*). The dashboard shows the genre you write most, words written per genre, works and words per genre, and lists untagged works to tag in place. The same breakdown by form (story, poem, screenplay, article) and by project, with project word goals.

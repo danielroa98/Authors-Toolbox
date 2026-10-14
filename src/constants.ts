@@ -93,6 +93,15 @@ export interface ToolboxPrefs {
   exportContact: string;
   exportPseudonym: string;
   exportChapterBreaks: boolean;
+  // revision
+  /** Keep a draft automatically the first time a writing note is opened each day. */
+  autoDrafts: boolean;
+  /** Days to keep automatic drafts. */
+  autoDraftDays: number;
+  /** Folder (in the vault) for drafts; hidden by default. */
+  draftsFolder: string;
+  /** Revision view: "changes" (changed paragraphs and their neighbours) or "all". */
+  revisionShow: "changes" | "all";
 }
 
 export const DEFAULTS: ToolboxPrefs = {
@@ -113,4 +122,5 @@ export const DEFAULTS: ToolboxPrefs = {
   exportPresets: {}, linesAsParagraphs: false,
   dailyGoal: 0, writingFolders: "", sprintMinutes: 25, sprintTarget: 500, sprints: [], habitsRange: "30", exportFont: "times", exportSpacing: "2", exportPage: "letter",
   exportContact: "", exportPseudonym: "", exportChapterBreaks: false,
+  autoDrafts: true, autoDraftDays: 30, draftsFolder: ".authors-toolbox/drafts", revisionShow: "changes",
 };

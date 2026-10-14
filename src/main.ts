@@ -35,6 +35,10 @@ import { DEFAULT_CRUTCH, analyze, baseLang, buildOutline, detectLang, ltChunks, 
 import type { LtIssue, LtResponse, Para, Sentence, WordToken } from "./text/analysis";
 import { LANGS, normLang, todayKey } from "./view/helpers";
 import { PluginState, WritingView } from "./view/writing-view";
+import { Revision } from "./revision/controller";
+import { revisionExtension } from "./revision/editor";
+import { RevisionView, VIEW_REVISION } from "./revision/view";
+import type { AnalyzeOptions, Analysis } from "./text/analysis";
 
 /* ======================================================================
    PLUGIN
@@ -70,6 +74,7 @@ export default class AuthorsToolbox extends Plugin {
   saveSettingsSoon!: Debouncer<[], Promise<void>>;
   refreshSoon!: Debouncer<[], void>;
   selectionSoon!: Debouncer<[], void>;
+  revision!: Revision;
 
   override async onload(): Promise<void> {
     const loadedData = (await this.loadData()) as Partial<ToolboxPrefs> | null;
@@ -83,6 +88,8 @@ export default class AuthorsToolbox extends Plugin {
     this.registerEditorExtension([alignView, issueField, selectionWatcher, clicks, spView, spAttrs, poemAttrs]);
     if (this.prefs.smartEnter) this.registerEditorExtension(spKeymap);
     this.registerEditorExtension(rayaExtension(this));
+    this.revision = new Revision(this);
+    this.registerEditorExtension(revisionExtension);
     this.registerMarkdownPostProcessor((el, ctx) => spPostProcess(el, ctx));
     this.registerMarkdownPostProcessor((el, ctx) => poemPostProcess(el, ctx));
     this.registerEditorSuggest(new ScriptSuggest(this.app, this));
@@ -136,6 +143,8 @@ export default class AuthorsToolbox extends Plugin {
       }
       if (!(file instanceof TFile) || file.extension !== "md") return;
       menu.addItem((i) => i.setTitle("Export manuscript…").setIcon("file-down").setSection("action").onClick(() => { void this.exportManuscript(file); }));
+      menu.addItem((i) => i.setTitle("Save a draft…").setIcon("save").setSection("action").onClick(() => { void this.revision.saveDraft(file); }));
+      menu.addItem((i) => i.setTitle("Compare drafts").setIcon("git-compare").setSection("action").onClick(() => { void this.revision.open(file); }));
     }));
     this.registerEvent(this.app.workspace.on("editor-menu", (menu, editor, view) => {
       menu.addSeparator();
@@ -170,6 +179,7 @@ export default class AuthorsToolbox extends Plugin {
     this.registerEvent(this.app.vault.on("rename", (file, oldPath) => {
       // keep a renamed note's writing history
       if (this.prefs.daily && renamePath(this.prefs.daily, oldPath, file.path)) this.saveSettingsSoon();
+      if (file instanceof TFile) void this.revision.rename(oldPath, file.path);
       this.refreshSoon();
     }));
 
@@ -185,6 +195,20 @@ export default class AuthorsToolbox extends Plugin {
       if (!checking) this.openGenre(f);
       return true;
     } });
+    // revision
+    this.registerView(VIEW_REVISION, (leaf) => new RevisionView(leaf, this));
+    const mdFile = (run: (f: TFile) => void) => (checking: boolean): boolean => {
+      const f = this.app.workspace.getActiveFile();
+      if (!f || f.extension !== "md") return false;
+      if (!checking) run(f);
+      return true;
+    };
+    this.addCommand({ id: "draft-save", name: "Save a draft of this note…", icon: "save", checkCallback: mdFile((f) => { void this.revision.saveDraft(f); }) });
+    this.addCommand({ id: "revision-open", name: "Compare drafts of this note", icon: "git-compare", checkCallback: mdFile((f) => { void this.revision.open(f); }) });
+    this.addCommand({ id: "revision-marks", name: "Show or hide changes since the last draft in the editor", icon: "diff", checkCallback: mdFile((f) => { void this.revision.toggleMarks(f.path); }) });
+    this.addCommand({ id: "revision-word", name: "Export the changes since the last draft with tracked changes (.docx)", icon: "file-diff", checkCallback: mdFile((f) => { void this.revision.exportTracked(f.path); }) });
+    this.addCommand({ id: "revision-goal", name: "Set a revision goal for this note…", icon: "target", checkCallback: mdFile((f) => this.revision.setGoal(f.path)) });
+
     this.statusEl = this.addStatusBarItem();
     this.statusEl.addClass("at-sprint-status");
     this.registerInterval(window.setInterval(() => this.sprintTick(), 1000));
@@ -205,6 +229,11 @@ export default class AuthorsToolbox extends Plugin {
   override onunload(): void {
     this.app.workspace.getLeavesOfType(VIEW_WRITING).forEach((l) => l.detach());
     this.app.workspace.getLeavesOfType(VIEW_HABITS).forEach((l) => l.detach());
+    this.app.workspace.getLeavesOfType(VIEW_REVISION).forEach((l) => l.detach());
+  }
+
+  settingChanged(key: string): void {
+    if (key === "draftsFolder") this.revision.forget();
   }
 
   async saveSettings(): Promise<void> { await this.saveData(this.prefs); }
@@ -260,6 +289,7 @@ export default class AuthorsToolbox extends Plugin {
       const text = v.editor ? v.editor.getValue() : (v as unknown as { data?: string }).data || "";
       const n = proseMap(text).paras.reduce((t, p) => t + (p.kind === "heading" ? 0 : words(p.plain).length), 0);
       this.trackDaily(v.file.path, n);
+      void this.revision.checkpoint(v.file.path, text);
       return;
     }
     this.computeState(v);
@@ -272,8 +302,7 @@ export default class AuthorsToolbox extends Plugin {
     const text = view.editor ? view.editor.getValue() : (view as unknown as { data?: string }).data || "";
     const L = this.noteLang(file);
     const s = this.prefs;
-    const crutch = { en: s.crutchEn || DEFAULT_CRUTCH.en, es: s.crutchEs || DEFAULT_CRUTCH.es };
-    const analysis = analyze(text, { lang: L.code, longSentence: s.longSentence, echoWindow: s.echoWindow, crutch, linesAsParagraphs: s.linesAsParagraphs });
+    const analysis = analyze(text, this.analyzeOptions(L.code));
     const outline = buildOutline(text);
     const fm = (this.app.metadataCache.getFileCache(file)?.frontmatter || {}) as Record<string, unknown>;
     const rawGoal = fm.word_goal;
@@ -304,6 +333,25 @@ export default class AuthorsToolbox extends Plugin {
     // hyphenation & screen readers follow the note language
     try { view.contentEl.setAttr("lang", L.code === "auto" ? analysis.lang : L.code.slice(0, 2)); } catch { /* ignore */ }
     this.trackDaily(file.path, analysis.words);
+    void this.revision.checkpoint(file.path, text);
+  }
+
+  analyzeOptions(lang: string): AnalyzeOptions {
+    const s = this.prefs;
+    const crutch = { en: s.crutchEn || DEFAULT_CRUTCH.en, es: s.crutchEs || DEFAULT_CRUTCH.es };
+    return { lang, longSentence: s.longSentence, echoWindow: s.echoWindow, crutch, linesAsParagraphs: s.linesAsParagraphs };
+  }
+
+  /** Style analysis of any text, in the note's language. */
+  analyzeText(text: string, file: TFile | null): Analysis {
+    return analyze(text, this.analyzeOptions(file ? this.noteLang(file).code : "auto"));
+  }
+
+  /** Is the note in one of the writing folders (see `writingFiles`)? */
+  isWritingPath(path: string): boolean {
+    const lines = (this.prefs.writingFolders.trim() ? this.prefs.writingFolders : `${this.prefs.storyFolders}\n${this.prefs.scriptsFolder}`)
+      .split(/[\n,]/).map((x) => normalizePath(x.trim())).filter((x) => x && x !== "/");
+    return lines.some((f) => path.startsWith(f + "/"));
   }
 
   onSelection(cmView: EditorView): void {
