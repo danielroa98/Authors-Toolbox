@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.5.2 — 2026-10-14
+- **Fix:** dialogue that starts with a raya (—) on its own line is now counted even when the line has no blank line before it (consecutive lines of one Markdown paragraph). Each line is checked separately, so narration after a closing raya ("—Ven. —dijo ella") still doesn't count as dialogue.
+
 ## 1.5.1 — 2026-10-13
 - **Rewritten in TypeScript (strict mode).** Every value in the plugin now has a real type, which clears the 3,500 or so code warnings from the Obsidian directory review. `npm run build` type-checks before bundling.
 - **Searchable settings:** on Obsidian 1.13 and later, every setting appears in the settings search box. Older versions keep the classic settings screen. Both are built from one list, so they always match.

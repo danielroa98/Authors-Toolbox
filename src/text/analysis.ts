@@ -333,7 +333,8 @@ export function proseMap(text: string): ProseMap {
     if (last && last.k === "t" && last.from + last.s.length === from) last.s += s;
     else pieces.push({ k: "t", s, from });
     if (cur) {
-      if (cur.gap && cur.plain.length) cur.plain += " ";
+      // lines of the same Markdown paragraph are kept apart with "\n" (a dialogue turn often starts a line)
+      if (cur.gap && cur.plain.length) cur.plain += "\n";
       cur.gap = false;
       const lastSeg = cur.segs[cur.segs.length - 1];
       if (lastSeg && lastSeg.d + lastSeg.n === from && lastSeg.p + lastSeg.n === cur.plain.length) lastSeg.n += s.length;
@@ -528,25 +529,36 @@ export function splitSentences(s: string): Range[] {
   return out.filter(([a, b]) => words(s.slice(a, b)).length > 0);
 }
 
+/**
+ * Spans of dialogue in a paragraph's plain text, checked line by line:
+ * - a line that starts with a raya (— or –, or a hyphen right before the text) is a dialogue turn;
+ *   later rayas on that line switch between speech and narration ("—Ven. —dijo ella—. Ahora.");
+ * - elsewhere, text inside “…”, «…» or "…" counts as dialogue.
+ */
 export function dialogueRanges(s: string): Range[] {
-  const t = s.replace(/^\s+/, ""), lead = s.length - t.length, out: Range[] = [];
-  if (/^[—–]/.test(t) || /^-(?=\S)/.test(t)) {
-    let on = true, start = lead + 1;
-    for (let i = lead + 1; i < s.length; i++) {
-      if (s[i] === "—" || s[i] === "–") {
-        if (on) out.push([start, i]); else start = i + 1;
-        on = !on;
+  const out: Range[] = [];
+  let lineStart = 0;
+  for (const line of s.split("\n")) {
+    const t = line.replace(/^\s+/, ""), lead = line.length - t.length;
+    if (/^[—–]/.test(t) || /^-(?=\S)/.test(t)) {
+      let on = true, start = lead + 1;
+      for (let i = lead + 1; i < line.length; i++) {
+        if (line[i] === "—" || line[i] === "–") {
+          if (on) out.push([lineStart + start, lineStart + i]); else start = i + 1;
+          on = !on;
+        }
+      }
+      if (on) out.push([lineStart + start, lineStart + line.length]);
+    } else {
+      let open = -1;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === "“" || c === "«") { if (open < 0) open = i; }
+        else if (c === "”" || c === "»") { if (open >= 0) { out.push([lineStart + open, lineStart + i]); open = -1; } }
+        else if (c === '"') { if (open < 0) open = i; else { out.push([lineStart + open, lineStart + i]); open = -1; } }
       }
     }
-    if (on) out.push([start, s.length]);
-    return out;
-  }
-  let open = -1;
-  for (let i = 0; i < s.length; i++) {
-    const c = s[i];
-    if (c === "“" || c === "«") { if (open < 0) open = i; }
-    else if (c === "”" || c === "»") { if (open >= 0) { out.push([open, i]); open = -1; } }
-    else if (c === '"') { if (open < 0) open = i; else { out.push([open, i]); open = -1; } }
+    lineStart += line.length + 1;
   }
   return out;
 }
