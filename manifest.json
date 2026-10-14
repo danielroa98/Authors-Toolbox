@@ -1,7 +1,7 @@
 {
   "id": "authors-toolbox",
   "name": "Authors Toolbox",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "minAppVersion": "1.7.2",
   "description": "Write fiction and screenplays with a writing panel: stats, outline, style insights, English and Spanish grammar checks, Fountain scripts and Word/PDF manuscript export.",
   "author": "Daniel Roa",

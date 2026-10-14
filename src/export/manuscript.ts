@@ -121,6 +121,17 @@ function mergeRuns(runs: Run[]): Run[] {
 
 export const runsText = (runs: Run[]): string => runs.map((r) => r.text).join("");
 
+/**
+ * Which title-page lines to print. A subtitle that already names the author ("Un relato de Daniel Roa")
+ * replaces the "by …" line in a standard manuscript, and is left out of anonymous contest entries.
+ */
+export function titleLines(ms: Manuscript, o: ExportOptions): { subtitle: Run[] | null; byline: string | null } {
+  const name = norm(o.author);
+  const mentionsAuthor = !!ms.subtitle && !!name && norm(runsText(ms.subtitle)).includes(name);
+  if (o.layout === "contest") return { subtitle: mentionsAuthor ? null : ms.subtitle, byline: null };
+  return { subtitle: ms.subtitle, byline: o.author.trim() && !mentionsAuthor ? `${labels(o.lang).by} ${o.author.trim()}` : null };
+}
+
 /* ---------- blocks ---------- */
 
 const MARKER = /^(\s{0,3}(?:#{1,6}[ \t]+)?)%%(center|right|left|justify)%%/;

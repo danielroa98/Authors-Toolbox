@@ -1,5 +1,5 @@
 import { zip } from "./zip";
-import { labels, roundedWords, runsText } from "./manuscript";
+import { labels, roundedWords, runsText, titleLines } from "./manuscript";
 import type { ExportOptions, Manuscript, Run } from "./manuscript";
 
 /* ======================================================================
@@ -60,8 +60,10 @@ function bodyXml(ms: Manuscript, o: ExportOptions): string {
 }
 
 function titleBlock(ms: Manuscript, o: ExportOptions, before: number): string {
+  const { subtitle, byline } = titleLines(ms, o);
   const out = [para(text(ms.title), { align: "center", firstLine: 0, before, keepNext: true })];
-  if (ms.subtitle) out.push(para(ms.subtitle.map(run).join(""), { align: "center", firstLine: 0, keepNext: true }));
+  if (subtitle) out.push(para(subtitle.map(run).join(""), { align: "center", firstLine: 0, keepNext: true }));
+  if (byline) out.push(para(text(byline), { align: "center", firstLine: 0, keepNext: true }));
   return out.join("");
 }
 
@@ -83,9 +85,8 @@ export function buildDocx(ms: Manuscript, o: ExportOptions): Uint8Array {
     const count = `${L.about} ${roundedWords(ms.words).toLocaleString(o.lang === "es" ? "es-MX" : "en-US")} ${L.words}`;
     front = para(text(o.author.trim()) + "<w:r><w:tab/></w:r>" + text(count), { single: true, firstLine: 0, tabRight: textWidth });
     for (const line of o.contact.split("\n").map((x) => x.trim()).filter(Boolean)) front += para(text(line), { single: true, firstLine: 0 });
-    front += titleBlock(ms, o, 2880)
-      + (o.author.trim() ? para(text(`${L.by} ${o.author.trim()}`), { align: "center", firstLine: 0 }) : "")
-      + para("", { firstLine: 0 });
+    // title one blank line below the name block (not halfway down the page)
+    front += titleBlock(ms, o, lineTwips) + para("", { firstLine: 0 });
   }
 
   const headerRef = contest

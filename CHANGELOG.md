@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.1 — 2026-10-14
+- **Manuscript export:** the title now sits right under your name and contact details instead of a third of the way down the first page, so the story starts on page 1 without a large empty gap.
+- A subtitle that already names you (for example *Un relato escrito por …*) replaces the "by …" line instead of repeating your name, and it's left out of anonymous contest entries.
+
 ## 1.6.0 — 2026-10-14
 - **Manuscript export to Word (.docx) and PDF**, from the command palette, the note's ⋯ menu or the file explorer.
   - **Standard manuscript** layout: name, contact details, rounded word count, title page block and a *Surname / Title / page* header.

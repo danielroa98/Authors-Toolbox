@@ -1,5 +1,5 @@
 import { WIDTHS } from "./widths";
-import { labels, roundedWords } from "./manuscript";
+import { labels, roundedWords, titleLines } from "./manuscript";
 import type { ExportOptions, Manuscript, Run } from "./manuscript";
 
 /* ======================================================================
@@ -145,8 +145,9 @@ export function layoutManuscript(ms: Manuscript, o: ExportOptions): PageLayout {
 
   // ---- first page ----
   if (contest) {
+    const t = titleLines(ms, o);
     paragraph(plain(ms.title), { align: "center", keepWithNext: true });
-    if (ms.subtitle) paragraph(ms.subtitle, { align: "center" });
+    if (t.subtitle) paragraph(t.subtitle, { align: "center" });
     if (o.pseudonym.trim()) paragraph(plain(`${L.pseudonym}: ${o.pseudonym.trim()}`), { align: "center" });
     y += lineH;
   } else {
@@ -158,10 +159,12 @@ export function layoutManuscript(ms: Manuscript, o: ExportOptions): PageLayout {
     ] });
     y += singleH;
     for (const line of o.contact.split("\n").map((x) => x.trim()).filter(Boolean)) paragraph(plain(line), { align: "left", height: singleH });
-    y = Math.max(y + lineH, H / 3);
+    // title one blank line below the name block (not halfway down the page)
+    y += lineH;
+    const t = titleLines(ms, o);
     paragraph(plain(ms.title), { align: "center", keepWithNext: true });
-    if (ms.subtitle) paragraph(ms.subtitle, { align: "center" });
-    if (o.author.trim()) paragraph(plain(`${L.by} ${o.author.trim()}`), { align: "center" });
+    if (t.subtitle) paragraph(t.subtitle, { align: "center" });
+    if (t.byline) paragraph(plain(t.byline), { align: "center" });
     y += lineH;
   }
 
