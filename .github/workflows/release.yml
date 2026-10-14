@@ -15,6 +15,15 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Check that the tag matches manifest.json
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          version=$(node -p "require('./manifest.json').version")
+          if [ "$tag" != "$version" ]; then
+            echo "::error::Tag $tag does not match the version in manifest.json ($version). Bump manifest.json, package.json and versions.json first."
+            exit 1
+          fi
+
       - name: Use Node.js
         uses: actions/setup-node@v5
         with:
