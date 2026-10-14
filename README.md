@@ -296,7 +296,7 @@ Everything else runs entirely on your device: statistics, style insights, outlin
 
 Ideas under consideration, roughly in order of priority. Nothing here is promised; suggestions are welcome in the issues.
 
-Recently done: the TypeScript rewrite and searchable settings (1.5.1), dialogue detection on every line (1.5.2), manuscript export with a live preview (1.6), EPUB, plain text, project export, presets and the first part of poetry mode (1.7), writing habits with sprints, streaks and genre tracking (1.8), and revision mode with drafts, comparisons and tracked changes (1.9). The step-by-step plan is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+Recently done: the TypeScript rewrite and searchable settings (1.5.1), dialogue detection on every line (1.5.2), manuscript export with a live preview (1.6), EPUB, plain text, project export, presets and the first part of poetry mode (1.7), writing habits with sprints, streaks and genre tracking (1.8), and revision mode with drafts, comparisons and tracked changes (1.9).
 
 ### Writing habits: next steps
 - **Words revised per day** in the habits dashboard, so revision days count too; recovering a deleted note from its drafts.

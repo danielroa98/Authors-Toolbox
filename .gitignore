@@ -8,3 +8,5 @@ data.json
 tests/.build/
 # transfer archives
 .*.tgz
+
+docs/IMPLEMENTATION_PLAN.md
