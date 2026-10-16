@@ -11,6 +11,7 @@
 - [Screenplays](Screenplays)
 - [Poetry](Poetry)
 - [Manuscript export](Manuscript-export)
+- [Copy for Substack](Substack)
 - [Writing habits](Writing-habits)
 - [Revision mode](Revision-mode)
 

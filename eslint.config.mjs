@@ -1,5 +1,6 @@
 import { defineConfig } from "eslint/config";
 import obsidianmd from "eslint-plugin-obsidianmd";
+import { DEFAULT_BRANDS } from "eslint-plugin-obsidianmd/dist/lib/rules/ui/brands.js";
 import globals from "globals";
 
 // The sources are fully typed TypeScript, so the plugin's recommended (type-aware)
@@ -14,5 +15,6 @@ export default defineConfig([
       globals: { ...globals.browser },
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
+    rules: { "obsidianmd/ui/sentence-case": ["warn", { enforceCamelCaseLower: true, brands: [...DEFAULT_BRANDS, "Substack"] }] },
   },
 ]);

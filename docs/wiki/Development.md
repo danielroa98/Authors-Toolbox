@@ -49,6 +49,7 @@ See [How it works](How-it-works) for what each part does. The analysis, metrics,
 | `screenplay.test.cjs` | Script formatting, tabs, scene moves, smart Enter, suggestions, Reading view, Fountain export, templates. |
 | `poetry.test.cjs` | Spanish syllable counts, rhyme, forms, Poem tab, verse in Reading view. |
 | `export.test.cjs` | Manuscript model, PDF, Word, EPUB, plain text, projects, contest anonymity. |
+| `substack.test.cjs` | Substack post from stories and poems (headings, links, stanzas, quotes), what is left out, the window and the clipboard. |
 | `habits.test.cjs` | Daily log, genres, streaks, sprints, dashboard. |
 | `revision.test.cjs` | Diff engine (including a randomised check of Myers), sections, editor marks, performance on novel-length text, draft store, tracked changes, the revision flow in the plugin. |
 | `analysis.test.cjs` | Words, language detection, dialogue, readability, outline reordering, LanguageTool chunks. |

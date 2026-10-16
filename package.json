@@ -1,6 +1,6 @@
 {
   "name": "authors-toolbox",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Obsidian plugin: writing tools for fiction writers and screenwriters.",
   "private": true,
   "scripts": {

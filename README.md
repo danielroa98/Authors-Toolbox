@@ -33,6 +33,7 @@ It works on **macOS, Windows, Linux, iPhone and iPad** and requires Obsidian 1.7
   - [Spanish dialogue dash (raya)](#spanish-dialogue-dash-raya)
   - [Screenplay mode](#screenplay-mode)
   - [Manuscript export (Word, PDF, EPUB, text)](#manuscript-export-word-pdf-epub-text)
+  - [Copy for Substack](#copy-for-substack)
   - [Poetry mode](#poetry-mode)
   - [Writing habits](#writing-habits)
   - [Revision mode](#revision-mode)
@@ -141,6 +142,17 @@ Turn a story, a poem or a whole project into submission-ready files: run *Export
 
 
 → More in the wiki: [Manuscript export (Word, PDF, EPUB, text)](https://github.com/danielroa98/Authors-Toolbox/wiki/Manuscript-export)
+### Copy for Substack
+
+Post a story or poem on Substack without fixing it by hand after pasting: run *Copy for Substack…*, or choose **Copy for Substack…** in the note's ⋯ menu or the file explorer. A window shows the post as it will paste, with a **Copy** button for each part.
+
+- **Title and subtitle** are copied on their own, because Substack keeps them in their own fields. The title is the first `#` heading (or the `title` property); the subtitle is a heading right under it, or the `subtitle` property.
+- **The text** pastes as rich text: paragraphs, italics, bold, links, block quotes and section headings (your top-level sections become *Heading 2*, since Heading 1 is the post's title). Scene breaks become Substack **dividers**.
+- **Poems keep their shape:** each stanza is one paragraph with a line break after each line (what Shift+Enter makes in Substack), so lines stay single-spaced and never run together. Indentation is kept with no-break spaces, which Substack doesn't remove.
+- The window lists what Substack can't receive, so you can add it there: images, footnotes, and centred or right-aligned text (Substack has no text alignment). Callouts, comments, tables and code are left out, and your byline is dropped (Substack shows it on every post).
+- Apps that only take plain text receive a plain version with the same lines and paragraphs.
+
+→ More in the wiki: [Copy for Substack](https://github.com/danielroa98/Authors-Toolbox/wiki/Substack)
 ### Poetry mode
 
 Mark a note with `type: poem` (or `poema`, `poesía`), or add `poem` to its `cssclasses`, and it is treated as verse:
@@ -201,6 +213,7 @@ Revising is not drafting: the word count may go down, and what matters is *what 
 | Convert dialogue dashes (- → —) in this note | |
 | Export manuscript as a document or PDF… | also in the note's ⋯ menu and the file explorer; anthology notes export as a project |
 | Export folder as one manuscript… | right-click a folder in the file explorer |
+| Copy for Substack… | also in the note's ⋯ menu and the file explorer |
 | Open writing habits / Start a writing sprint… / Stop the writing sprint | |
 | Set genre of this note… | |
 | Save a draft of this note… / Compare drafts of this note | also in the note's ⋯ menu |
@@ -225,6 +238,7 @@ On iPhone and iPad, add the commands you use most to the mobile toolbar (**Setti
 | `format: short` / `feature` / `pilot` | Script length target shown in the Script tab. |
 | `title`, `credit`, `author`, `adapted_from`, `draft_date`, `contact` | Title page of the `.fountain` export. |
 | `title`, `pseudonym` | Title and pen name of an exported manuscript. |
+| `title`, `subtitle` | Title and subtitle of a Substack post. |
 | `order` | Position of a chapter or story in a project export. |
 | `genre` (or `genres`, `género`) | Genres of a work, for the writing-habits breakdown. |
 | `word_goal` on a project note | Word goal of an anthology or collection. |
@@ -296,7 +310,7 @@ Everything else runs entirely on your device: statistics, style insights, outlin
 
 Ideas under consideration, roughly in order of priority. Nothing here is promised; suggestions are welcome in the issues.
 
-Recently done: the TypeScript rewrite and searchable settings (1.5.1), dialogue detection on every line (1.5.2), manuscript export with a live preview (1.6), EPUB, plain text, project export, presets and the first part of poetry mode (1.7), writing habits with sprints, streaks and genre tracking (1.8), and revision mode with drafts, comparisons and tracked changes (1.9).
+Recently done: the TypeScript rewrite and searchable settings (1.5.1), dialogue detection on every line (1.5.2), manuscript export with a live preview (1.6), EPUB, plain text, project export, presets and the first part of poetry mode (1.7), writing habits with sprints, streaks and genre tracking (1.8), revision mode with drafts, comparisons and tracked changes (1.9), and Copy for Substack (1.10).
 
 ### Writing habits: next steps
 - **Words revised per day** in the habits dashboard, so revision days count too; recovering a deleted note from its drafts.
@@ -388,6 +402,7 @@ src/
 │   ├── docx.ts              # Word writer (Office Open XML)
 │   ├── epub.ts              # EPUB 3 writer
 │   ├── text.ts              # plain-text writer
+│   ├── substack.ts          # Substack post: title, subtitle, HTML and plain text to paste
 │   ├── zip.ts               # minimal ZIP writer for .docx
 │   └── widths.ts            # glyph widths of the PDF standard fonts
 ├── poetry/
@@ -412,10 +427,11 @@ src/
 │   └── modals.ts            # draft, goal and confirmation windows
 └── modals/
     ├── export-manuscript.ts # export window with live page preview
+    ├── substack.ts          # Copy for Substack window and rich-text clipboard
     ├── insert-image.ts
     └── prompts.ts
 tests/
-├── *.test.cjs               # one file per area: plugin, screenplay, poetry, export, habits, revision, analysis
+├── *.test.cjs               # one file per area: plugin, screenplay, poetry, export, substack, habits, revision, analysis
 ├── fixtures/                # sample notes
 └── support/                 # Obsidian mock, test helpers, bundle entry
 ```
@@ -429,8 +445,8 @@ The wiki's pages and images live in [`docs/wiki/`](docs/wiki) and are published 
 1. Update `version` in `manifest.json` and `package.json`, and add the version to `versions.json`.
 2. Commit, then tag with the same version and push the tag:
    ```bash
-   git tag -a 1.9.0 -m "1.9.0"
-   git push origin 1.9.0
+   git tag -a 1.10.0 -m "1.10.0"
+   git push origin 1.10.0
    ```
 3. The GitHub Action checks that the tag matches `manifest.json`, runs lint and the tests, builds the plugin and creates a **draft release** with `main.js`, `manifest.json` and `styles.css` and a build-provenance attestation. Review it and publish.
 

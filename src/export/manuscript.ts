@@ -10,6 +10,8 @@ export interface Run {
   text: string; b?: boolean; i?: boolean;
   /** Tracked changes (Word export of a revision): text added or cut since a draft. */
   ins?: boolean; del?: boolean;
+  /** Link target (only when the manuscript is built with `links`, for Substack). */
+  href?: string;
 }
 /** A whole block added or cut since a draft (tracked changes). */
 export type Change = "ins" | "del";
@@ -87,8 +89,19 @@ export function roundedWords(n: number): number {
 
 const ESC = ""; // placeholder for escaped markup characters
 
-/** Remove Obsidian/Markdown syntax that never appears in a manuscript, keeping emphasis markers. */
-export function cleanInline(s: string): string {
+// link markers: LINK_OPEN + index into the URL list + LINK_MID, the link text, LINK_CLOSE
+const LINK_OPEN = "\uE010", LINK_MID = "\uE011", LINK_CLOSE = "\uE012";
+
+/**
+ * Remove Obsidian/Markdown syntax that never appears in a manuscript, keeping emphasis markers.
+ * With `links`, web links are kept as markers (their URLs pushed to the list) for `linkRuns`.
+ */
+export function cleanInline(s: string, links?: string[]): string {
+  const link = (text: string, url: string) => {
+    if (!links) return text;
+    links.push(url);
+    return LINK_OPEN + String(links.length - 1) + LINK_MID + text + LINK_CLOSE;
+  };
   return s
     .replace(/\\([*_~=[\]#`\\|>-])/g, (_m: string, c: string) => ESC + c.charCodeAt(0).toString(16) + ";")
     .replace(/%%[\s\S]*?%%/g, "")                          // comments and alignment markers
@@ -97,7 +110,8 @@ export function cleanInline(s: string): string {
     .replace(/\[\[([^\]|#]*)(#[^\]|]*)?\|([^\]]*)\]\]/g, "$3") // [[note|shown]]
     .replace(/\[\[([^\]|#]*)(#[^\]]*)?\]\]/g, "$1")           // [[note]] / [[note#heading]]
     .replace(/\[\^[^\]]*\]/g, "")                            // footnote refs
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")                 // [text](url)
+    .replace(/\[([^\]]*)\]\(\s*<?([^)\s>]*)>?(?:\s+"[^"]*")?\s*\)/g, (_m: string, t: string, u: string) => link(t, u)) // [text](url)
+    .replace(/<((?:https?:\/\/|mailto:)[^>\s]+)>/g, (_m: string, u: string) => link(u.replace(/^mailto:/, ""), u)) // <https://…>
     .replace(/`([^`]*)`/g, "$1")
     .replace(/<\/?[a-zA-Z][^>]*>/g, "")
     .replace(/==([^=]+)==/g, "$1")
@@ -140,10 +154,29 @@ function mergeRuns(runs: Run[]): Run[] {
   const out: Run[] = [];
   for (const r of runs) {
     const last = out[out.length - 1];
-    if (last && !!last.b === !!r.b && !!last.i === !!r.i) last.text += r.text;
-    else out.push({ text: r.text, ...(r.b ? { b: true } : {}), ...(r.i ? { i: true } : {}) });
+    if (last && !!last.b === !!r.b && !!last.i === !!r.i && last.href === r.href) last.text += r.text;
+    else out.push({ text: r.text, ...(r.b ? { b: true } : {}), ...(r.i ? { i: true } : {}), ...(r.href ? { href: r.href } : {}) });
   }
   return out;
+}
+
+const LINK_MARK = new RegExp(`${LINK_OPEN}(\\d+)${LINK_MID}|${LINK_CLOSE}`, "g");
+
+/** Turn the link markers left by `cleanInline(s, links)` into runs with `href`. */
+export function linkRuns(runs: Run[], links: string[]): Run[] {
+  const out: Run[] = [];
+  let href: string | undefined;
+  const push = (r: Run, text: string) => { if (text) out.push({ ...r, text, ...(href ? { href } : {}) }); };
+  for (const r of runs) {
+    let last = 0;
+    for (const m of r.text.matchAll(LINK_MARK)) {
+      push(r, r.text.slice(last, m.index));
+      href = m[1] !== undefined ? links[Number(m[1])] || undefined : undefined;
+      last = m.index + m[0].length;
+    }
+    push(r, r.text.slice(last));
+  }
+  return mergeRuns(out);
 }
 
 export const runsText = (runs: Run[]): string => runs.map((r) => r.text).join("");
@@ -173,7 +206,7 @@ const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").tri
  * is the subtitle, unless it's just the author's name (a byline), which is dropped, or the first
  * of several sections at its level (a story that opens with "## Chapter 1").
  */
-export function buildManuscript(text: string, opts: { fallbackTitle: string; fmTitle?: string; authorNames: string[]; poem?: boolean }): Manuscript {
+export function buildManuscript(text: string, opts: { fallbackTitle: string; fmTitle?: string; authorNames: string[]; poem?: boolean; links?: boolean }): Manuscript {
   const lines = text.split("\n");
   const blocks: Block[] = [];
   let title = opts.fmTitle?.trim() || "";
@@ -183,6 +216,13 @@ export function buildManuscript(text: string, opts: { fallbackTitle: string; fmT
   const authors = opts.authorNames.map(norm).filter(Boolean);
   const headingsAt = new Map<number, number>();
   for (const l of lines) { const h = HEADING_RE.exec(l); if (h) headingsAt.set(h[2].length, (headingsAt.get(h[2].length) ?? 0) + 1); }
+  /** Inline text to runs, keeping web links when asked to. */
+  const inline = (s: string, trim: "both" | "end"): Run[] => {
+    const urls: string[] | undefined = opts.links ? [] : undefined;
+    const clean = cleanInline(s, urls);
+    const runs = parseInline(trim === "both" ? clean.trim() : clean.trimEnd());
+    return urls ? linkRuns(runs, urls) : runs;
+  };
 
   for (let n = bodyStart(lines); n < lines.length; n++) {
     let L = lines[n];
@@ -202,6 +242,7 @@ export function buildManuscript(text: string, opts: { fallbackTitle: string; fmT
     if (callout && /^\s*>/.test(L)) continue;
     callout = false;
     if (/^\s*\|/.test(L) || /^\s*\$\$/.test(L)) continue;
+    if (/^\s{0,3}\[\^[^\]]+\]:/.test(L)) continue;            // footnote text
     if (/^\s*!\[\[[^\]]*\]\]\s*$/.test(L) || /^\s*!\[[^\]]*\]\([^)]*\)\s*$/.test(L)) continue;
 
     // alignment marker: applies to its whole block (until the next blank line)
@@ -220,7 +261,7 @@ export function buildManuscript(text: string, opts: { fallbackTitle: string; fmT
     const h = HEADING_RE.exec(L);
     if (h) {
       const level = h[2].length;
-      const runs = parseInline(cleanInline(h[3]).trim());
+      const runs = inline(h[3], "both");
       const plain = runsText(runs).trim();
       if (!plain) continue;
       if (!sawProse && !titleTaken && level === 1) {
@@ -243,7 +284,7 @@ export function buildManuscript(text: string, opts: { fallbackTitle: string; fmT
       // verse: keep the line as written, including its indentation (a tab counts as 4 spaces)
       const lead = /^[ \t]*/.exec(L)?.[0] ?? "";
       const indent = lead.replace(/\t/g, "    ").length;
-      const runs = parseInline(cleanInline(L.slice(lead.length)).trimEnd());
+      const runs = inline(L.slice(lead.length), "end");
       if (!runsText(runs).trim()) continue;
       blocks.push({ kind: "verse", runs, align: align === "justify" ? "left" : align, indent });
       sawProse = true;
@@ -255,7 +296,7 @@ export function buildManuscript(text: string, opts: { fallbackTitle: string; fmT
     // list markers are dropped, except a leading hyphen: in fiction that's a dialogue dash
     const li = LIST_RE.exec(L);
     if (li && li[2] !== "-") L = L.slice(li[0].length);
-    const runs = parseInline(cleanInline(L).trim());
+    const runs = inline(L, "both");
     if (!runsText(runs).trim()) continue;
     blocks.push({ kind: "para", runs, align, ...(quote ? { quote } : {}) });
     sawProse = true;

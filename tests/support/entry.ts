@@ -11,6 +11,8 @@ export { buildPdf } from "../../src/export/pdf";
 export { buildDocx } from "../../src/export/docx";
 export { buildEpub } from "../../src/export/epub";
 export { buildText } from "../../src/export/text";
+export * as substack from "../../src/export/substack";
+export { copyRich, SubstackModal } from "../../src/modals/substack";
 export * as habitsLog from "../../src/habits/log";
 export * as genres from "../../src/habits/genres";
 export { HabitsView } from "../../src/habits/view";

@@ -71,6 +71,7 @@ See [Poetry → How syllables are counted](Poetry#how-syllables-are-counted) for
    - **Word** (`export/docx.ts`): Office Open XML (document, styles, settings, header or footer with a PAGE field, core properties) in a ZIP written by `export/zip.ts` (stored entries, CRC-32).
    - **EPUB 3** (`export/epub.ts`): `mimetype` stored first and uncompressed, container, package document, navigation document, NCX for older readers, one XHTML file per chapter and a stylesheet. Validated with EPUBCheck.
    - **Text** (`export/text.ts`).
+   - **Substack** (`export/substack.ts`): the model built with web links kept, turned into the few blocks the Substack editor holds — paragraphs, Heading 2 and lower, block quotes, dividers. A stanza is one paragraph whose lines are joined by `<br>` (Substack's Shift+Enter line break), and indentation becomes no-break spaces. The body goes on the clipboard as HTML with a plain-text twin; the title and subtitle are copied on their own.
 
 ## Writing habits
 

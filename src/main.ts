@@ -9,6 +9,8 @@ import { alignView, applyAlign } from "./editor/alignment";
 import { DocRange, issueAt, issueField, issueRange, removeIssue, setFind, setIssues } from "./editor/issues";
 import { convertDialogueDashes, rayaExtension } from "./editor/raya";
 import { ExportManuscriptModal } from "./modals/export-manuscript";
+import { SubstackModal } from "./modals/substack";
+import { buildSubstack, substackNotes } from "./export/substack";
 import { buildManuscript, compileProject } from "./export/manuscript";
 import type { ProjectEntry } from "./export/manuscript";
 import { isPoemFM, isPoemText } from "./poetry/poem";
@@ -119,6 +121,7 @@ export default class AuthorsToolbox extends Plugin {
     this.addCommand({ id: "script-new", name: "Screenplay: new script…", icon: "clapperboard", callback: () => this.newScript() });
     this.addCommand({ id: "script-adapt", name: "Screenplay: adapt this story into a script", icon: "clapperboard", callback: () => { void this.adaptStory(); } });
     this.addCommand({ id: "manuscript-export", name: "Export manuscript as a document or PDF…", icon: "file-down", callback: () => { void this.exportManuscript(); } });
+    this.addCommand({ id: "substack-copy", name: "Copy for Substack…", icon: "clipboard-copy", callback: () => { void this.copyForSubstack(); } });
     this.addCommand({ id: "script-export", name: "Screenplay: export as .fountain", icon: "file-output", callback: () => { void this.exportFountain(); } });
     this.addCommand({ id: "script-toggle", name: "Screenplay: turn script formatting on/off for this note", icon: "film", callback: () => { void this.toggleScriptMode(); } });
     for (const [k, label, icon] of [["scene", "Scene heading", "clapperboard"], ["action", "Action", "pilcrow"], ["character", "Character", "user"], ["paren", "Parenthetical", "parentheses"], ["transition", "Transition", "arrow-right"], ["centered", "Centered", "align-center"]]) {
@@ -143,6 +146,7 @@ export default class AuthorsToolbox extends Plugin {
       }
       if (!(file instanceof TFile) || file.extension !== "md") return;
       menu.addItem((i) => i.setTitle("Export manuscript…").setIcon("file-down").setSection("action").onClick(() => { void this.exportManuscript(file); }));
+      menu.addItem((i) => i.setTitle("Copy for Substack…").setIcon("clipboard-copy").setSection("action").onClick(() => { void this.copyForSubstack(file); }));
       menu.addItem((i) => i.setTitle("Save a draft…").setIcon("save").setSection("action").onClick(() => { void this.revision.saveDraft(file); }));
       menu.addItem((i) => i.setTitle("Compare drafts").setIcon("git-compare").setSection("action").onClick(() => { void this.revision.open(file); }));
     }));
@@ -903,6 +907,21 @@ export default class AuthorsToolbox extends Plugin {
       ms, folder: f.parent?.path ?? "", baseName: f.basename, lang: this.langOf(f, text),
       pseudonym: typeof fm.pseudonym === "string" ? fm.pseudonym : undefined,
     }).open();
+  }
+
+  /** Open the Substack window for a story or poem note (the active one by default): title, subtitle and text to paste. */
+  async copyForSubstack(file?: TFile): Promise<void> {
+    const v = this.target || this.app.workspace.getActiveViewOfType(MarkdownView);
+    const f = file ?? v?.file ?? null;
+    if (!f || f.extension !== "md") { new Notice("Open the story or poem you want to post first."); return; }
+    const text = v && v.file === f && v.editor ? v.editor.getValue() : await this.app.vault.read(f);
+    if (isScriptText(text)) { new Notice("This note is a script. Substack posts are made from stories and poems."); return; }
+    const fm = (this.app.metadataCache.getFileCache(f)?.frontmatter ?? {}) as Record<string, unknown>;
+    const poem = isPoemFM(fm) || isPoemText(text);
+    const ms = buildManuscript(text, { fallbackTitle: f.basename, fmTitle: typeof fm.title === "string" ? fm.title : undefined, authorNames: [this.prefs.authorName], poem, links: true });
+    const post = buildSubstack(ms, typeof fm.subtitle === "string" ? fm.subtitle : undefined);
+    if (!post.blocks.length) { new Notice("This note has no text to post yet."); return; }
+    new SubstackModal(this.app, post, substackNotes(text, ms), poem).open();
   }
 
   /** Language of a note for labels ("FIN" / "END"). */

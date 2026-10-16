@@ -16,6 +16,7 @@ It runs on **macOS, Windows, Linux, iPhone and iPad** (Obsidian 1.7.2 or later).
 | 🎬 | [Screenplays](Screenplays) | Fountain screenplays formatted as you type, with smart Enter, suggestions, a scene board, cast list, coaching notes and `.fountain` export. |
 | 🪶 | [Poetry](Poetry) | Verse layout, Spanish *métrica* (sinalefa, ley del acento final), rhyme scheme and form recognition. |
 | 📄 | [Manuscript export](Manuscript-export) | Word, PDF, EPUB and plain text in standard manuscript or anonymous contest format, with a live page preview and whole-project export. |
+| 📮 | [Copy for Substack](Substack) | A story or poem ready to paste into a Substack post: title and subtitle apart, formatting and verse lines kept. |
 | 🔥 | [Writing habits](Writing-habits) | Words per day, goals, streaks, sprints, and where your words go by genre, form and project. |
 | 🔁 | [Revision mode](Revision-mode) | Drafts of a note, comparisons word by word and chapter by chapter, restoring text, revision goals, marks in the editor and Word files with tracked changes. |
 

@@ -42,6 +42,7 @@ Every command is in the command palette (Ctrl/Cmd + P) under **Authors Toolbox**
 |---|---|---|
 | Export manuscript as a document or PDF… | note's ⋯ menu, file explorer | Anthology notes export as a project. See [Manuscript export](Manuscript-export). |
 | Export folder as one manuscript… | right-click a folder | |
+| Copy for Substack… | note's ⋯ menu, file explorer | See [Copy for Substack](Substack). |
 
 ## Writing habits
 

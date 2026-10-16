@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.10.0 — 2026-10-16
+- **Copy for Substack** (command palette, the note's ⋯ menu or the file explorer): a story or poem ready to paste into a Substack post.
+  - **Title** and **subtitle** copied separately, for Substack's own fields (from the first heading and the one under it, or the `title` and `subtitle` properties).
+  - The text pastes with paragraphs, italics, bold, **links**, block quotes, section headings (from Heading 2) and **dividers** for scene breaks.
+  - **Poems:** one paragraph per stanza with a line break after each line (like Shift+Enter in Substack), and indentation kept.
+  - A preview of the post, and a list of what Substack can't receive (images, footnotes, centred text).
+- **Manuscript export:** footnote text (`[^1]: …`) is no longer printed as a paragraph, and `<https://…>` links keep their address.
+
 ## 1.9.0 — 2026-10-14
 - **Revision mode:**
   - **Drafts** of a note: save a named draft with a note, or let the plugin keep one automatically the first time you open a writing note each day.
